@@ -38,3 +38,5 @@ fi
 for fl in $HOME/.zprezto/runcoms/custom/*.zsh; do
   . $fl
 done
+
+. ~/.zprezto/zsh-functional/functional.plugin.zsh
