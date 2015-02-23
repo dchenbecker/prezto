@@ -19,7 +19,7 @@ zstyle ':prezto:*:*' color 'yes'
 # zstyle ':prezto:load' zmodule 'attr' 'stat'
 
 # Set the Zsh functions to load (man zshcontrib).
-# zstyle ':prezto:load' zfunction 'zargs' 'zmv'
+zstyle ':prezto:load' zfunction 'zargs' 'zmv'
 
 # Set the Prezto modules to load (browse modules).
 # The order matters.
@@ -32,6 +32,9 @@ zstyle ':prezto:load' pmodule \
   'spectrum' \
   'utility' \
   'completion' \
+  'git' \
+  'archive' \
+  'history-substring-search' \
   'prompt'
 
 #
@@ -56,7 +59,7 @@ zstyle ':prezto:module:editor' key-bindings 'emacs'
 #
 
 # Set the command prefix on non-GNU systems.
-# zstyle ':prezto:module:gnu-utility' prefix 'g'
+zstyle ':prezto:module:gnu-utility' prefix 'g'
 
 #
 # History Substring Search
@@ -135,13 +138,16 @@ zstyle ':prezto:module:prompt' theme 'sorin'
 #
 
 # Auto set the tab and window titles.
-# zstyle ':prezto:module:terminal' auto-title 'yes'
+zstyle ':prezto:module:terminal' auto-title 'yes'
+
+# Auto set tmux window title
+zstyle ':prezto:module:terminal' auto-tmux-title 'yes'
 
 # Set the window title format.
-# zstyle ':prezto:module:terminal:window-title' format '%n@%m: %s'
+#zstyle ':prezto:module:terminal:window-title' format '%m:%s'
 
 # Set the tab title format.
-# zstyle ':prezto:module:terminal:tab-title' format '%m: %s'
+#zstyle ':prezto:module:terminal:tab-title' format '%s'
 
 #
 # Tmux
