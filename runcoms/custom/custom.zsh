@@ -40,6 +40,9 @@ alias tmux='runtmux'
 alias top='htop'
 alias vi="$EDITOR"
 
+# I want globbing with rsync, prezto
+unalias rsync
+
 # Enable ssh-style host completion for syh
 compdef _hosts synchome.sh
 
