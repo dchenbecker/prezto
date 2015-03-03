@@ -88,3 +88,5 @@ PROMPT='${SSH_TTY:+"%F{red}%n%f@%F{yellow}%m%f "}%F{cyan}${_prompt_sorin_pwd}%f$
 #RPROMPT='${editor_info[overwrite]}%(?:: %F{red}⏎%f)${VIM:+" %B%F{green}V%f%b"}${INSIDE_EMACS:+" %B%F{green}E%f%b"}'
 unset RPROMPT
 
+# Use prezto LESS settings, without -S (I like folded lines)
+export LESS='-F -g -i -M -R -X -z-4'
