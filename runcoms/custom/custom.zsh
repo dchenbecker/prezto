@@ -91,3 +91,9 @@ unset RPROMPT
 
 # Use prezto LESS settings, without -S (I like folded lines)
 export LESS='-F -g -i -M -R -X -z-4'
+
+
+# boot2docker is *such* a pain: https://github.com/boot2docker/boot2docker/issues/628#issuecomment-68909772
+DOCKER_HOST=tcp://127.0.0.1:2376
+DOCKER_CERT_PATH=/Users/dchenbecker/.boot2docker/certs/boot2docker-vm
+DOCKER_TLS_VERIFY=1
