@@ -13,6 +13,7 @@ if [ $(uname -s) = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
   export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
+  export PATH=$PATH:/usr/local/texlive/2014basic/bin/x86_64-darwin
   alias tar='gtar'
 fi
 
