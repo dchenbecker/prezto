@@ -24,6 +24,7 @@ alias curlapi="curl -H 'Content-Type: application/json'"
 alias egrep='egrep --color=auto'
 alias etags='ctags -e --languages=scala,java,python,puppet -R'
 alias fgrep='fgrep --color=auto'
+alias gfa='git fetch --all -p'
 alias go='git checkout'
 alias grep='grep --color=auto'
 alias l='ls -CF'
