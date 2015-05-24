@@ -33,6 +33,7 @@ then
   unfunction precmd
   unfunction preexec
   PS1='$ '
+  return
 fi
 
 for fl in $HOME/.zprezto/runcoms/custom/*.zsh; do
