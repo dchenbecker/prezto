@@ -15,6 +15,9 @@ if [ "$(uname -s)" = "Darwin" ]; then
   export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
   export PATH=$PATH:/usr/local/texlive/2014basic/bin/x86_64-darwin:/usr/local/go/bin
   alias tar='gtar'
+  alias sbt='eval "java ${SBT_OPTS} -jar /usr/local/Cellar/sbt/0.13.9/libexec/sbt-launch.jar"'
+else
+  alias sbt='nocorrect sbt'
 fi
 
 alias cstags='ctags -eR --languages="c#"'
@@ -35,7 +38,6 @@ alias ls='ls --color=auto'
 alias mv='mv -i'
 alias qe="emacs -q -nw"
 alias revelation='keepassx'
-alias sbt='nocorrect sbt'
 alias scp='rsync -vazP'
 alias screen='runtmux'
 alias syh='synchome.sh'
@@ -105,3 +107,6 @@ if [ -f /usr/local/bin/virtualenvwrapper.sh ]; then
     export PROJECT_HOME=$HOME/SimpleEnergy
     source /usr/local/bin/virtualenvwrapper.sh
 fi
+
+# SBT settings, because the Typesafe launcher is borken
+export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
