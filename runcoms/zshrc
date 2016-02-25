@@ -12,6 +12,7 @@ fi
 
 # Customize to your needs...
 setopt extendedglob
+setopt nobraceccl
 
 export PATH="/usr/local/opt/coreutils/libexec/gnubin:/usr/local/bin:/bin:/usr/sbin:/sbin:/usr/bin:$HOME/bin"
 export MANPATH="/usr/local/man:$MANPATH"

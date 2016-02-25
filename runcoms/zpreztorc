@@ -23,6 +23,7 @@ zstyle ':prezto:load' zfunction 'zargs' 'zmv'
 
 # Set the Prezto modules to load (browse modules).
 # The order matters.
+if [[ $ZSH_VERSION > "5.0.2" ]]; then
 zstyle ':prezto:load' pmodule \
   'environment' \
   'terminal' \
@@ -38,6 +39,22 @@ zstyle ':prezto:load' pmodule \
   'syntax-highlighting' \
   'history-substring-search' \
   'prompt'
+else
+zstyle ':prezto:load' pmodule \
+  'environment' \
+  'terminal' \
+  'editor' \
+  'history' \
+  'directory' \
+  'spectrum' \
+  'utility' \
+  'completion' \
+  'ssh' \
+  'git' \
+  'archive' \
+  'history-substring-search' \
+  'prompt'
+fi
 
 #
 # Editor
