@@ -42,3 +42,7 @@ for fl in $HOME/.zprezto/runcoms/custom/*.zsh; do
 done
 
 . ~/.zprezto/zsh-functional/functional.plugin.zsh
+
+if [ -r ~/.zprezto/runcoms/byhost/$(hostname -f) ]; then
+    . ~/.zprezto/runcoms/byhost/$(hostname -f)
+fi
