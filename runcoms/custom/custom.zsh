@@ -22,7 +22,7 @@ fi
 
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
-alias ctags='ctags --languages=scala,java,python,puppet -R --exclude=.ensime_cache'
+alias ctags='ctags --languages=scala,java,python,puppet -R --exclude=.ensime_cache --exclude=.tox'
 alias curlapi="curl -H 'Content-Type: application/json'"
 alias egrep='egrep --color=auto'
 alias etags='ctags -e'
