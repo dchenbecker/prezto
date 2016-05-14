@@ -97,8 +97,8 @@ export LESS='-F -g -i -M -R -X -z-4'
 
 
 # boot2docker init
-if which boot2docker > /dev/null && [ $(boot2docker status) = "running" ]; then
-    $(boot2docker shellinit 2> /dev/null)
+if which docker-machine > /dev/null && [ $(docker-machine status) = "Running" ]; then
+    eval $(docker-machine env 2> /dev/null)
 fi
 
 # VirtualEnv Wrapper
