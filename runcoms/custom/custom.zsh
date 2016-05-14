@@ -13,7 +13,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
   export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-  export PATH=$PATH:/usr/local/texlive/2014basic/bin/x86_64-darwin:/usr/local/go/bin
+  export PATH=$PATH:/usr/local/texlive/2015basic/bin/x86_64-darwin:/usr/local/go/bin
   alias tar='gtar'
   alias sbt='eval "java ${SBT_OPTS} -jar /usr/local/Cellar/sbt/0.13.9/libexec/sbt-launch.jar"'
 else
