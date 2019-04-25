@@ -17,8 +17,12 @@ fi
 # Editors
 #
 
-export EDITOR='nano'
-export VISUAL='nano'
+export EDITOR="emacsclient -nw"
+
+if [[ -n DISPLAY ]]; then
+    export VISUAL=emacsclient
+fi
+
 export PAGER='less'
 
 #

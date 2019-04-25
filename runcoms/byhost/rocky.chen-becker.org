@@ -1,0 +1,13 @@
+# -*- mode: sh; sh-shell: zsh; -*-
+
+# Set up the completion directory
+fpath+="$HOME/.zprezto/completion"
+
+export MANPATH="/usr/local/man:$MANPATH"
+
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export PATH=$PATH:~/.cargo/bin:/home/software/scala/bin
+export GPG_TTY=$(tty)
+
+# This is really annoying because it always locks out Debbie
+umask 002

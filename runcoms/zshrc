@@ -5,9 +5,6 @@
 #   Sorin Ionescu <sorin.ionescu@gmail.com>
 #
 
-# Set up the completion directory
-fpath+="$HOME/.zprezto/completion"
-
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
@@ -17,16 +14,7 @@ fi
 setopt extendedglob
 setopt nobraceccl
 
-export PATH="/usr/local/opt/coreutils/libexec/gnubin:/usr/local/bin:/bin:/usr/sbin:/sbin:/usr/bin:$HOME/bin"
-export MANPATH="/usr/local/man:$MANPATH"
-
-# Preferred editor for local and remote sessions
-export ALTERNATE_EDITOR=""
-if [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR='emacsclient -nw'
-else
-  export EDITOR='emacsclient'
-fi
+export PATH="/usr/local/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin:/usr/bin:$HOME/bin"
 
 # For tramp happiness
 if [[ "$TERM" == "dumb" ]]
@@ -44,8 +32,6 @@ fi
 for fl in $HOME/.zprezto/runcoms/custom/*.zsh; do
   . $fl
 done
-
-. ~/.zprezto/zsh-functional/functional.plugin.zsh
 
 if [ -r ~/.zprezto/runcoms/byhost/$(hostname -f) ]; then
     . ~/.zprezto/runcoms/byhost/$(hostname -f)
