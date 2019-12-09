@@ -40,6 +40,7 @@ alias syh='synchome.sh'
 alias tmux='runtmux'
 alias top='htop'
 alias vi="\$EDITOR"
+alias qp="qpdfview"
 
 # I want globbing with rsync, prezto
 unalias rsync
