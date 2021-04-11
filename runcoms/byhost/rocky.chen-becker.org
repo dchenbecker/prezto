@@ -2,10 +2,11 @@
 
 # Set up the completion directory
 fpath+="$HOME/.zprezto/completion"
+compinit
 
 export MANPATH="/usr/local/man:$MANPATH"
 
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 export PATH=$PATH:~/.cargo/bin:/home/software/scala/bin
 export GPG_TTY=$(tty)
 
