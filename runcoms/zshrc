@@ -36,3 +36,7 @@ done
 if [ -r ~/.zprezto/runcoms/byhost/$(hostname -f) ]; then
     . ~/.zprezto/runcoms/byhost/$(hostname -f)
 fi
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="/ssdhome/derek/.sdkman"
+[[ -s "/ssdhome/derek/.sdkman/bin/sdkman-init.sh" ]] && source "/ssdhome/derek/.sdkman/bin/sdkman-init.sh"
