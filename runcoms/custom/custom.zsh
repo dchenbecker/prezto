@@ -11,10 +11,30 @@ else
   alias sbt='nocorrect sbt'
 fi
 
+# We want Rust tools in our path (e.g. rg, exa)
+if [ -d "$HOME/.cargo/bin" ]; then
+    path+="$HOME/.cargo/bin"
+fi
+
 # Special dircolors
 if [ -r ~/.dircolors ]; then
   eval "$(dircolors ~/.dircolors)"
 fi
+
+# Try out exa for a while and see if we like it...
+if hash exa &>/dev/null; then
+    LS_COMMAND=exa
+    alias ls='exa'
+    alias l='exa -F'
+    alias tree='exa -T'
+else
+    LS_COMMAND=ls
+    alias ls='ls --color=auto'
+    alias l='ls -CF'
+fi
+
+alias la="$LS_COMMAND -la"
+alias ll="$LS_COMMAND -l"
 
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
@@ -26,11 +46,6 @@ alias fgrep='fgrep --color=auto'
 alias gfa='git fetch --all -p'
 alias go='git checkout'
 alias grep='grep --color=auto'
-alias l='ls -CF'
-alias la='ls -la'
-alias la='ls -la'
-alias ll='ls -l'
-alias ls='ls --color=auto'
 alias mv='mv -i'
 alias qe="emacs -q -nw"
 alias revelation='keepassx'
