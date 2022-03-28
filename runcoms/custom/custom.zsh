@@ -16,6 +16,12 @@ if [ -d "$HOME/.cargo/bin" ]; then
     path+="$HOME/.cargo/bin"
 fi
 
+## Nicer cat/less replacement
+if hash bat &>/dev/null; then
+    alias cat="bat --pager=never"
+    alias less="bat"
+fi
+
 # Special dircolors
 if [ -r ~/.dircolors ]; then
   eval "$(dircolors ~/.dircolors)"
