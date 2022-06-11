@@ -79,6 +79,9 @@ alias top='htop'
 alias vi="\$EDITOR"
 alias qp="qpdfview"
 
+# Make emacs start a new server if it's not already running
+export ALTERNATE_EDITOR=""
+
 # I want globbing with rsync, prezto
 unalias rsync
 
