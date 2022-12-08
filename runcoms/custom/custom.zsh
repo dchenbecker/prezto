@@ -58,6 +58,21 @@ fi
 alias la="$LS_COMMAND -la"
 alias ll="$LS_COMMAND -l"
 
+# Better cp if it exists
+if hash xcp &> /dev/null; then
+    alias cp=xcp
+fi
+
+# Better find if it exists
+if hash fd &> /dev/null; then
+    alias find=fd
+fi
+
+# Use the fork of youtube-dl if it exists
+if hash yt-dlp &> /dev/null; then
+    alias youtube-dl=yt-dlp
+fi
+
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
 alias ctags='ctags --languages=scala,java,python,puppet,kotlin,rust -R --exclude=.ensime_cache --exclude=.tox --exclude=.git'
