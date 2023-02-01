@@ -24,7 +24,7 @@ fi
 
 # Special dircolors
 if [ -r ~/.dircolors ]; then
-  eval "$(dircolors ~/.dircolors)"
+  eval "$(dircolors)"
 fi
 
 # Try out exa for a while and see if we like it...
