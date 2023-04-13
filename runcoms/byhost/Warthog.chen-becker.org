@@ -1,0 +1,2 @@
+export TERM=xterm-24bit
+export EMACS_SOCKET_NAME=/tmp/derek/emacs1000/server
