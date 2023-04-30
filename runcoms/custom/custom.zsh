@@ -145,8 +145,15 @@ export LESS='-F -g -i -M -R -X -z-4'
 # SBT settings, because the Typesafe launcher is borken
 export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
-# ghcup-env
-[ -f "/ssdhome/derek/.ghcup/env" ] && source "/ssdhome/derek/.ghcup/env"
+# Use ghcup for Haskell stuff if available
+if [ -r ~/.ghcup/env ]; then
+    source ~/.ghcup/env
+fi
+
+# Set up Nix env if available
+if [ -r ~/.nix-profile/etc/profile.d/nix.sh ]; then
+    source ~/.nix-profile/etc/profile.d/nix.sh
+fi
 
 # Set up autocd if possible
 [ -d ~/.cdpath ] && export cdpath=(~/.cdpath /home/software/projects/)
