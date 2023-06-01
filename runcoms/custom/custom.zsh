@@ -3,8 +3,8 @@ if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
   export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-  export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-  export MANPATH="/usr/local/opt/coreutils/libexec/gnuman:$PATH"
+  export PATH="/opt/homebrew/bin:/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
+  export MANPATH="/opt/homebrew/opt/coreutils/libexec/gnuman:/opt/homebrew/share/man"
   alias tar='gtar'
   alias dircolors='gdircolors'
 else
