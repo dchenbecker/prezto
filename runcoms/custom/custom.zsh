@@ -3,16 +3,22 @@ if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
 
-  path=(
+  export path=(
       /opt/homebrew/bin
       /opt/homebrew/opt/coreutils/libexec/gnubin
       $path
       /usr/local/texlive/2023/bin/universal-darwin
   )
-  export PATH
 
-  export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-  export MANPATH="/opt/homebrew/opt/coreutils/libexec/gnuman:/opt/homebrew/share/man"
+  export manpath=(
+      /opt/homebrew/opt/coreutils/libexec/gnuman
+      /opt/homebrew/share/man
+      /usr/share/man
+  )
+
+  export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -s /tmp/realdcb/emacs501/server"
+  export VISUAL="$EDITOR"
+
   alias tar='gtar'
   alias dircolors='gdircolors'
 else
