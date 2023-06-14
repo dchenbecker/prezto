@@ -26,6 +26,10 @@ else
   alias sbt='nocorrect sbt'
 fi
 
+# Simple Java aliases
+# Maybe switch to https://github.com/protocol7/javaenv at some point
+alias jdk11='export JAVA_HOME=/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home'
+
 # We want Rust tools in our path (e.g. rg, exa)
 if [ -d "$HOME/.cargo/bin" ]; then
     path+="$HOME/.cargo/bin"
