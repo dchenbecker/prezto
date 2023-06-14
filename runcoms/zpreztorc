@@ -40,6 +40,7 @@ zstyle ':prezto:load' pmodule \
   'utility' \
   'ssh' \
   'git' \
+  'node' \
   'archive' \
   'syntax-highlighting' \
   'history-substring-search' \
@@ -56,6 +57,7 @@ zstyle ':prezto:load' pmodule \
   'utility' \
   'ssh' \
   'git' \
+  'node' \
   'archive' \
   'history-substring-search' \
   'prompt' \

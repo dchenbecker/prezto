@@ -4,6 +4,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
 
   export path=(
+      ~/.nodenv/shims
       /opt/homebrew/bin
       /opt/homebrew/opt/coreutils/libexec/gnubin
       $path
