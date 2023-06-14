@@ -38,13 +38,13 @@ zstyle ':prezto:load' pmodule \
   'directory' \
   'spectrum' \
   'utility' \
-  'completion' \
   'ssh' \
   'git' \
   'archive' \
   'syntax-highlighting' \
   'history-substring-search' \
-  'prompt'
+  'prompt' \
+  'completion'
 else
 zstyle ':prezto:load' pmodule \
   'environment' \
@@ -54,12 +54,12 @@ zstyle ':prezto:load' pmodule \
   'directory' \
   'spectrum' \
   'utility' \
-  'completion' \
   'ssh' \
   'git' \
   'archive' \
   'history-substring-search' \
-  'prompt'
+  'prompt' \
+  'completion'
 fi
 
 #
