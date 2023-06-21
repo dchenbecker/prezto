@@ -9,6 +9,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
       /opt/homebrew/opt/coreutils/libexec/gnubin
       $path
       /usr/local/texlive/2023/bin/universal-darwin
+      /Applications/Wireshark.app/Contents/MacOS
   )
 
   export manpath=(
