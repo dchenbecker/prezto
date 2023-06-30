@@ -117,4 +117,5 @@ export LESS='-F -g -i -M -R -X -z-4'
 # SBT settings, because the Typesafe launcher is borken
 export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
-
+# ghcup-env
+[ -f "/ssdhome/derek/.ghcup/env" ] && source "/ssdhome/derek/.ghcup/env"
