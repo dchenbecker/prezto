@@ -11,6 +11,12 @@ else
   alias sbt='nocorrect sbt'
 fi
 
+# Add Nix if available
+if [ -d "/nix/var/nix/profiles/default/bin" ]; then
+    path+=/nix/var/nix/profiles/default/bin
+    path+=~/.nix-profile/bin
+fi
+
 # We want Rust tools in our path (e.g. rg, exa)
 if [ -d "$HOME/.cargo/bin" ]; then
     path+="$HOME/.cargo/bin"
