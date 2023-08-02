@@ -5,6 +5,11 @@
 #   Sorin Ionescu <sorin.ionescu@gmail.com>
 #
 
+CUSTOM_COMPLETION_DIR="${ZDOTDIR:-$HOME}/.zprezto/completion"
+if [[ -d "${CUSTOM_COMPLETION_DIR}" ]]; then
+   fpath+="${CUSTOM_COMPLETION_DIR}"
+fi
+
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
@@ -39,6 +44,9 @@ fi
 
 # Try out starship
 eval "$(starship init zsh)"
+
+# Run compinit (again?!?!) to get custom completions
+compinit
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="/ssdhome/derek/.sdkman"
