@@ -18,7 +18,9 @@ if [ "$(uname -s)" = "Darwin" ]; then
       /usr/share/man
   )
 
-  export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -s /tmp/realdcb/emacs501/server"
+  export EMACS_SOCKET_NAME=/tmp/${USER}/emacs${UID}/server
+  export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
+  alias en="${EDITOR} -nw"
   export VISUAL="$EDITOR"
 
   alias tar='gtar'
