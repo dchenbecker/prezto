@@ -125,6 +125,5 @@ export LESS='-F -g -i -M -R -X -z-4'
 # SBT settings, because the Typesafe launcher is borken
 export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
-# Use the "jump" command for better directory traversal
-# https://github.com/gsamokovarov/jump
-eval "$(jump shell)"
+# Set cdpath for useful locations
+export cdpath=(~/Documents ~/Downloads ~/Repos ~/.cdpath)
