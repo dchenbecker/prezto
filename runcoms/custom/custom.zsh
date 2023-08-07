@@ -119,3 +119,6 @@ export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
 # ghcup-env
 [ -f "/ssdhome/derek/.ghcup/env" ] && source "/ssdhome/derek/.ghcup/env"
+
+# Set up autocd if possible
+[ -d ~/.cdpath ] && export cdpath=(~/.cdpath /home/software/projects/)
