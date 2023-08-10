@@ -1,0 +1,41 @@
+#!/usr/bin/env zsh
+
+set -e
+
+LOGIN_ENVS=(stg prd)
+LOGIN_REGIONS=(sfo2 fra1)
+
+list_select() {
+    local CHOICES=(${(P)${2}})
+    local CHOICE_SIZE=$#CHOICES
+    print $1
+    for i in {1..$#CHOICES}; do
+        print "${i}. ${CHOICES[$i]}"
+    done
+
+    while read "SELECT?Choice: "; do
+        if [[ "$SELECT" =~ "[0-9]+" ]] && (( $SELECT > 0 && $SELECT <= $#2 )); then
+            eval "$3=${CHOICES[$SELECT]}"
+            return
+        else
+            print "Invalid selection"
+        fi
+    done
+}
+
+list_select "Available envs:" LOGIN_ENVS TSH_ENV
+list_select "Available regions:" LOGIN_REGIONS TSH_REGION
+
+TSH_PROXY="teleport.$TSH_ENV.$TSH_REGION.1keyes.net"
+
+print "Logging in to $TSH_PROXY"
+
+tsh login --proxy $TSH_PROXY
+
+AVAILABLE_CLUSTERS=($(tsh kube ls | awk '/cluster_type/{print $1}'))
+
+list_select "Available clusters:" AVAILABLE_CLUSTERS TSH_CLUSTER
+
+print "Connecting to $TSH_CLUSTER"
+
+tsh kube login $TSH_CLUSTER
