@@ -48,6 +48,9 @@ eval "$(starship init zsh)"
 # Run compinit (again?!?!) to get custom completions
 compinit
 
+# Enable fzf completion
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="/ssdhome/derek/.sdkman"
 [[ -s "/ssdhome/derek/.sdkman/bin/sdkman-init.sh" ]] && source "/ssdhome/derek/.sdkman/bin/sdkman-init.sh"
