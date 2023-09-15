@@ -17,6 +17,11 @@ if [ -d "/nix/var/nix/profiles/default/bin" ]; then
     path+=~/.nix-profile/bin
 fi
 
+# Add asdf if available
+if [ -f ~/.asdf/asdf.sh ]; then
+    source ~/.asdf/asdf.sh
+fi
+
 # We want Rust tools in our path (e.g. rg, eza)
 if [ -d "$HOME/.cargo/bin" ]; then
     path+="$HOME/.cargo/bin"
