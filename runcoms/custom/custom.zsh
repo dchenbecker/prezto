@@ -33,7 +33,7 @@ fi
 # Maybe switch to https://github.com/protocol7/javaenv at some point
 alias jdk11='export JAVA_HOME=/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home'
 
-# We want Rust tools in our path (e.g. rg, exa)
+# We want Rust tools in our path (e.g. rg, eza)
 if [ -d "$HOME/.cargo/bin" ]; then
     path+="$HOME/.cargo/bin"
 fi
@@ -54,12 +54,12 @@ if [ -r ~/.dircolors ]; then
   eval "$(dircolors)"
 fi
 
-# Try out exa for a while and see if we like it...
-if hash exa &>/dev/null; then
-    LS_COMMAND=exa
-    alias ls='exa'
-    alias l='exa -F'
-    alias tree='exa -T'
+# Try out eza for a while and see if we like it...
+if hash eza &>/dev/null; then
+    LS_COMMAND=eza
+    alias ls='eza'
+    alias l='eza -F'
+    alias tree='eza -T'
 else
     LS_COMMAND=ls
     alias ls='ls --color=auto'
