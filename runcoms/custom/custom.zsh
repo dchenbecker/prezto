@@ -33,6 +33,11 @@ if hash bat &>/dev/null; then
     alias less="bat"
 fi
 
+## Nicer watch replacement
+if hash viddy &>/dev/null; then
+    alias watch="viddy"
+fi
+
 # Special dircolors
 if [ -r ~/.dircolors ]; then
   eval "$(dircolors)"
