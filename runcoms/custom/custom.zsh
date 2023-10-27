@@ -131,7 +131,7 @@ export LESS='-F -g -i -M -R -X -z-4'
 export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
 # Set cdpath for useful locations
-export cdpath=(~/Documents ~/Downloads ~/Repos ~/.cdpath)
+export cdpath=(~/Documents ~/Downloads ~/Repos ~/Tools ~/.cdpath)
 
 # Set up asdf if available
 [[ -f /opt/homebrew/opt/asdf/libexec/asdf.sh ]] && {
