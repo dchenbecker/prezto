@@ -42,13 +42,8 @@ if [ -r ~/.zprezto/runcoms/byhost/$(hostname -f) ]; then
     . ~/.zprezto/runcoms/byhost/$(hostname -f)
 fi
 
-# Try out starship
-eval "$(starship init zsh)"
-
-# Run compinit (again?!?!) to get custom completions
+# Set up the completion directory
+fpath+="$HOME/.zprezto/completion"
 compinit
 
-# # Enable fzf completion
-# [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-# [ -f ~/Tools/fzf-tab-completion/zsh/fzf-zsh-completion.sh ] && source ~/Tools/fzf-tab-completion/zsh/fzf-zsh-completion.sh
-
+eval "$(starship init zsh)"
