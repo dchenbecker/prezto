@@ -37,5 +37,8 @@ if [ -r ~/.zprezto/runcoms/byhost/$(hostname -f) ]; then
     . ~/.zprezto/runcoms/byhost/$(hostname -f)
 fi
 
-eval "$(starship init zsh)"
+# Set up the completion directory
+fpath+="$HOME/.zprezto/completion"
+compinit
 
+eval "$(starship init zsh)"

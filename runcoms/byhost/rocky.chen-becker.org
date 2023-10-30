@@ -1,9 +1,5 @@
 # -*- mode: sh; sh-shell: zsh; -*-
 
-# Set up the completion directory
-fpath+="$HOME/.zprezto/completion"
-compinit
-
 export MANPATH="/usr/local/man:$MANPATH"
 
 export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
