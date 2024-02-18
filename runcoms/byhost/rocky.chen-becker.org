@@ -2,7 +2,6 @@
 
 export MANPATH="/usr/local/man:$MANPATH"
 
-export PATH=$PATH:/home/software/scala/bin
 export GPG_TTY=$(tty)
 
 # This is really annoying because it always locks out Debbie
@@ -10,3 +9,7 @@ umask 002
 
 # Make emacs play well locally
 export EMACS_SOCKET_NAME=/tmp/derek/emacs1000/server
+
+path+=/home/software/scala/bin
+path+=~/.dotnet/tools
+export PATH
