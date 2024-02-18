@@ -2,7 +2,6 @@
 
 export MANPATH="/usr/local/man:$MANPATH"
 
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 export PATH=$PATH:/home/software/scala/bin
 export GPG_TTY=$(tty)
 
