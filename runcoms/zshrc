@@ -52,6 +52,3 @@ compinit
 # [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # [ -f ~/Tools/fzf-tab-completion/zsh/fzf-zsh-completion.sh ] && source ~/Tools/fzf-tab-completion/zsh/fzf-zsh-completion.sh
 
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-export SDKMAN_DIR="/ssdhome/derek/.sdkman"
-[[ -s "/ssdhome/derek/.sdkman/bin/sdkman-init.sh" ]] && source "/ssdhome/derek/.sdkman/bin/sdkman-init.sh"
