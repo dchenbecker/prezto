@@ -8,7 +8,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
       /opt/homebrew/bin
       /opt/homebrew/opt/coreutils/libexec/gnubin
       $path
-      /usr/local/texlive/2023/bin/universal-darwin
+      /usr/local/texlive/2024/bin/universal-darwin
       /Applications/Wireshark.app/Contents/MacOS
   )
 
