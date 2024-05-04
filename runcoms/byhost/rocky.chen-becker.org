@@ -16,6 +16,8 @@ mikemux() {
     chmod g+rwx sessions/mojo
 }
 
+cdpath+=/home/software/tools
+
 path+=/home/software/scala/bin
 path+=~/.dotnet/tools
 export PATH
