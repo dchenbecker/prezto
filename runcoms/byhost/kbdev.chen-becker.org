@@ -1,0 +1,3 @@
+# Add snap path for docker and other tools in Ubuntu 24.04
+path+=/snap/bin
+export PATH
