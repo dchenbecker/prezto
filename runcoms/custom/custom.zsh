@@ -73,6 +73,12 @@ if hash yt-dlp &> /dev/null; then
     alias youtube-dl=yt-dlp
 fi
 
+# Set up Terraform completions if it's installed
+if [ -x /usr/bin/terraform ]; then
+    autoload -U +X bashcompinit && bashcompinit
+    complete -o nospace -C /usr/bin/terraform terraform
+fi
+
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
 alias ctags='ctags --languages=scala,java,python,puppet,kotlin,rust -R --exclude=.ensime_cache --exclude=.tox --exclude=.git'
