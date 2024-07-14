@@ -20,6 +20,8 @@ fi
 # Add asdf if available
 if [ -f ~/.asdf/asdf.sh ]; then
     source ~/.asdf/asdf.sh
+    # Enable dotnet environment
+    source ~/.asdf/plugins/dotnet/set-dotnet-env.zsh
 fi
 
 # We want Rust tools in our path (e.g. rg, eza)
