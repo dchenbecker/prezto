@@ -21,3 +21,10 @@ cdpath+=/home/software/tools
 path+=/home/software/scala/bin
 path+=~/.dotnet/tools
 export PATH
+
+
+# Utility function for rotating PDFs
+pdfrotate() {
+    FILENAME=$(mktemp PDFROTATE.XXXXXXXX)
+    qpdf --rotate=${1} ${2} ${FILENAME} && mv -f ${FILENAME} ${2}
+}
