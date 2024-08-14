@@ -139,14 +139,6 @@ autoload -U select-word-style
 select-word-style bash
 WORDCHARS=""
 
-# Fix up the sorin prompt the way I like it (but not on the terminal)
-if [[ $TERM != "linux" ]]; then
-    export PROMPT='${SSH_TTY:+"%F{red}%n%f@%F{yellow}%m%f "}%F{cyan}${_prompt_sorin_pwd}%f${git_info:+${(e)git_info[prompt]}}%(!. %B%F{red}#%f%b.)${git_info[rprompt]}${editor_info[keymap]} '
-    unset RPROMPT
-else
-    prompt sorin
-fi
-
 # Use prezto LESS settings, without -S (I like folded lines)
 export LESS='-F -g -i -M -R -X -z-4'
 
