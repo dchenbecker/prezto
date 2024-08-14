@@ -99,6 +99,7 @@ alias screen='runtmux'
 alias syh='synchome.sh'
 alias tmux='runtmux'
 alias top='htop'
+alias upgrade='sudo zsh -c "apt update && apt upgrade && apt autoremove"'
 alias vi="\$EDITOR"
 alias qp="qpdfview"
 
