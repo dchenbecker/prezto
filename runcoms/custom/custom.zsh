@@ -153,3 +153,8 @@ export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 [[ -f /opt/homebrew/opt/asdf/libexec/asdf.sh ]] && {
     . /opt/homebrew/opt/asdf/libexec/asdf.sh
 }
+
+# Set up podman if available
+[[ -d /opt/podman ]] && {
+    path+=/opt/podman/bin
+}
