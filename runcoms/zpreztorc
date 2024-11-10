@@ -29,37 +29,55 @@ zstyle ':prezto:load' zfunction 'zargs' 'zmv'
 
 # Set the Prezto modules to load (browse modules).
 # The order matters.
-if [[ $ZSH_VERSION > "5.0.2" ]]; then
-zstyle ':prezto:load' pmodule \
-  'environment' \
-  'terminal' \
-  'editor' \
-  'history' \
-  'directory' \
-  'spectrum' \
-  'utility' \
-  'completion' \
-  'ssh' \
-  'git' \
-  'archive' \
-  'syntax-highlighting' \
-  'history-substring-search' \
-  'prompt'
+if [[ $ZSH_VERSION > "5.0.2" && "$(uname -s)" != "OpenBSD" ]]; then
+    zstyle ':prezto:load' pmodule \
+	   'environment' \
+	   'terminal' \
+	   'editor' \
+	   'history' \
+	   'directory' \
+	   'spectrum' \
+	   'gnu-utility' \
+	   'utility' \
+	   'completion' \
+	   'ssh' \
+	   'git' \
+	   'archive' \
+	   'syntax-highlighting' \
+	   'history-substring-search' \
+	   'prompt'
+elif [[ "$(uname -s)" = "OpenBSD" ]]; then
+    # utility and gnu-utility aren't working, so I've removed them here
+    zstyle ':prezto:load' pmodule \
+	   'environment' \
+	   'terminal' \
+	   'editor' \
+	   'history' \
+	   'directory' \
+	   'spectrum' \
+	   'completion' \
+	   'ssh' \
+	   'git' \
+	   'archive' \
+	   'syntax-highlighting' \
+	   'history-substring-search' \
+	   'prompt'
 else
-zstyle ':prezto:load' pmodule \
-  'environment' \
-  'terminal' \
-  'editor' \
-  'history' \
-  'directory' \
-  'spectrum' \
-  'utility' \
-  'completion' \
-  'ssh' \
-  'git' \
-  'archive' \
-  'history-substring-search' \
-  'prompt'
+    zstyle ':prezto:load' pmodule \
+	   'environment' \
+	   'terminal' \
+	   'editor' \
+	   'history' \
+	   'directory' \
+	   'spectrum' \
+	   'gnu-utility' \
+	   'utility' \
+	   'completion' \
+	   'ssh' \
+	   'git' \
+	   'archive' \
+	   'history-substring-search' \
+	   'prompt'
 fi
 
 #

@@ -59,7 +59,9 @@ if hash eza &>/dev/null; then
     alias tree='eza -T'
 else
     LS_COMMAND=ls
-    alias ls='ls --color=auto'
+    if [[ "$(uname -s)" != "OpenBSD" ]]; then
+	alias ls='ls --color=auto'
+    fi
     alias l='ls -CF'
 fi
 
@@ -87,16 +89,20 @@ if [ -x /usr/bin/terraform ]; then
     complete -o nospace -C /usr/bin/terraform terraform
 fi
 
+# Set up GNU grep if available
+if grep --version |& grep -q GNU >& /dev/null; then
+    alias egrep='egrep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias grep='grep --color=auto'
+fi
+
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
 alias ctags='ctags --languages=scala,java,python,puppet,kotlin,rust -R --exclude=.ensime_cache --exclude=.tox --exclude=.git'
 alias curlapi="curl -H 'Content-Type: application/json'"
-alias egrep='egrep --color=auto'
 alias etags='ctags -e'
-alias fgrep='fgrep --color=auto'
 alias gfa='git fetch --all -p'
 alias go='git checkout'
-alias grep='grep --color=auto'
 alias mv='mv -i'
 alias qe="emacs -q -nw"
 alias revelation='keepassx'
@@ -113,7 +119,7 @@ alias qp="qpdfview"
 export ALTERNATE_EDITOR=""
 
 # I want globbing with rsync, prezto
-unalias rsync
+unalias rsync >& /dev/null
 
 # Enable ssh-style host completion for syh
 compdef _hosts synchome.sh

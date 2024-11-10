@@ -33,12 +33,23 @@ for fl in $HOME/.zprezto/runcoms/custom/*.zsh; do
   . $fl
 done
 
-if [ -r ~/.zprezto/runcoms/byhost/$(hostname -f) ]; then
-    . ~/.zprezto/runcoms/byhost/$(hostname -f)
+if [[ "$(uname -s)" = "OpenBSD" ]]; then
+    FQDN=$(hostname)
+else
+    FQDN=$(hostname -f)
+fi
+
+export FQDN
+
+if [ -r ~/.zprezto/runcoms/byhost/$FQDN ]; then
+    . ~/.zprezto/runcoms/byhost/$FQDN
 fi
 
 # Set up the completion directory
 fpath+="$HOME/.zprezto/completion"
 compinit
 
-eval "$(starship init zsh)"
+# If starship is available, initialize
+if which starship >& /dev/null; then
+   eval "$(starship init zsh)"
+fi
