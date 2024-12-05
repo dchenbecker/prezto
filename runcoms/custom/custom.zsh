@@ -96,6 +96,11 @@ if grep --version |& grep -q GNU >& /dev/null; then
     alias grep='grep --color=auto'
 fi
 
+# Load Proxmox environment if available
+if [ -f ~/.proxmox_env ]; then
+    . ~/.proxmox_env
+fi
+
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
 alias ctags='ctags --languages=scala,java,python,puppet,kotlin,rust -R --exclude=.ensime_cache --exclude=.tox --exclude=.git'
