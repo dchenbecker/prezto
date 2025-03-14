@@ -171,7 +171,14 @@ fi
 # Set up Nix env if available
 if [ -r ~/.nix-profile/etc/profile.d/nix.sh ]; then
     source ~/.nix-profile/etc/profile.d/nix.sh
+
+# Set up asdf if available
+[[ -x /opt/homebrew/bin/asdf ]] && {
+    path=(~/.asdf/shims $path)
+}
+
+# Set up direnv if available
+if which direnv >& /dev/null ; then
+    eval "$(direnv hook zsh)"
 fi
 
-# Set up autocd if possible
-[ -d ~/.cdpath ] && export cdpath=(~/.cdpath /home/software/projects/)
