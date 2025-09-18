@@ -18,8 +18,8 @@ if [ -d "/nix/var/nix/profiles/default/bin" ]; then
 fi
 
 # Add asdf if available
-if [ -f ~/.asdf/asdf.sh ]; then
-    source ~/.asdf/asdf.sh
+if which asdf >& /dev/null; then
+    path+=(~/.asdf/shims/)
     # Enable dotnet environment if available
     if [ -f ~/.asdf/plugins/dotnet/set-dotnet-env.zsh ]; then
         source ~/.asdf/plugins/dotnet/set-dotnet-env.zsh
@@ -171,11 +171,6 @@ fi
 # Set up Nix env if available
 if [ -r ~/.nix-profile/etc/profile.d/nix.sh ]; then
     source ~/.nix-profile/etc/profile.d/nix.sh
-
-# Set up asdf if available
-[[ -x /opt/homebrew/bin/asdf ]] && {
-    path=(~/.asdf/shims $path)
-}
 
 # Set up direnv if available
 if which direnv >& /dev/null ; then
