@@ -5,3 +5,8 @@ export cdpath=(~/Documents ~/Downloads ~/Repos ~/Tools)
 
 GPG_TTY=$(tty)
 export GPG_TTY
+
+# SonarQube setup
+if [ -f ~/.sonarlint/token ]; then
+    export SONAR_TOKEN=$(< ~/.sonarlint/token )
+fi
