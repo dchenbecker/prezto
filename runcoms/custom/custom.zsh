@@ -1,3 +1,8 @@
+# Add any go tools
+if [ -d ~/go/bin/ ]; then
+    path+=(~/go/bin)
+fi
+
 # Derek's OSX aliases
 if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
