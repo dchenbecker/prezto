@@ -169,6 +169,7 @@ fi
 # Set up Nix env if available
 if [ -r ~/.nix-profile/etc/profile.d/nix.sh ]; then
     source ~/.nix-profile/etc/profile.d/nix.sh
+fi
 
 # Set up direnv if available
 if which direnv >& /dev/null ; then
