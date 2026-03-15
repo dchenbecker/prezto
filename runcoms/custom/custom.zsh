@@ -23,16 +23,9 @@ if [ -d "/nix/var/nix/profiles/default/bin" ]; then
 fi
 
 # Add asdf if available
-if which asdf >& /dev/null; then
-    path+=(~/.asdf/shims/)
-    # Enable dotnet environment if available
-    if [ -f ~/.asdf/plugins/dotnet/set-dotnet-env.zsh ]; then
-        source ~/.asdf/plugins/dotnet/set-dotnet-env.zsh
-    fi
-    
-    if [ -d ~/.dotnet/tools ]; then
-        path+=(~/.dotnet/tools)
-    fi
+if hash asdf > /dev/null; then
+    export ASDF_DATA_DIR=~/.asdf
+    path=($ASDF_DATA_DIR/shims $path)
 fi
 
 # We want Rust tools in our path (e.g. rg, eza)
