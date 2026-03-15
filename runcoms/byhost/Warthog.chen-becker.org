@@ -1,2 +1,5 @@
 export TERM=xterm-24bit
 export EMACS_SOCKET_NAME=/tmp/derek/emacs1000/server
+
+# Ensure access to docker via WSL2
+path+=(/mnt/wsl/docker-desktop/cli-tools/usr/bin)
