@@ -27,6 +27,9 @@ if [ "$(uname -s)" = "Darwin" ]; then
   alias dircolors='gdircolors'
 else
   alias sbt='nocorrect sbt'
+
+  # Assuming 24 bit terminal under Windows and Linux
+  export TERM=xterm-24bit
 fi
 
 # Simple Java aliases
@@ -42,6 +45,7 @@ fi
 if hash bat &>/dev/null; then
     alias cat="bat --pager=never"
     alias less="bat"
+    export BAT_THEME="Solarized (light)"
 fi
 
 ## Nicer watch replacement
