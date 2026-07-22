@@ -150,12 +150,12 @@ export LESS='-F -g -i -M -R -X -z-4'
 export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
 # Set up asdf if available
-[[ -x /opt/homebrew/bin/asdf ]] && {
+if hash asdf &>/dev/null; then
     path=(~/.asdf/shims $path)
-}
+fi
 
 # Set up direnv if available
-if which direnv >& /dev/null ; then
+if hash direnv &>/dev/null ; then
     eval "$(direnv hook zsh)"
 fi
 
