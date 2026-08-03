@@ -13,3 +13,8 @@ fi
 
 # For windows, WSL2 needs some help on scaling
 export GDK_DPI_SCALE=1.75
+
+# Alias to simplify opening things in Windows from WSL
+fun winopen() {
+    /mnt/c/Windows/explorer.exe $(wslpath -w $1)
+}
