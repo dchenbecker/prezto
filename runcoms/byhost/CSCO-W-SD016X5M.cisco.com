@@ -18,3 +18,8 @@ export GDK_DPI_SCALE=1.75
 fun winopen() {
     /mnt/c/Windows/explorer.exe $(wslpath -w $1)
 }
+
+# Ensure font settings and keyboard maps for X11
+export DISPLAY=localhost:0
+xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.CSCO 
+xrdb -merge ~/.zprezto/runcoms/byhost/Xresources.CSCO 
