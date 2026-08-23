@@ -51,10 +51,10 @@ fi
 
 # Try out eza for a while and see if we like it...
 if hash eza &>/dev/null; then
-    LS_COMMAND=eza
-    alias ls='eza'
-    alias l='eza -F'
-    alias tree='eza -T'
+    LS_COMMAND="eza --icons"
+    alias ls='${LS_COMMAND} --icons'
+    alias l='${LS_COMMAND} --icons -F'
+    alias tree='${LS_COMMAND} --icons -T'
 else
     LS_COMMAND=ls
     if [[ "$(uname -s)" != "OpenBSD" ]]; then
