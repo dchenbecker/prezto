@@ -49,12 +49,12 @@ if [ -r ~/.dircolors ]; then
   eval "$(dircolors)"
 fi
 
-# Try out eza for a while and see if we like it...
+# Eza is a nice replacement for standard ls, with some extra bells and whistles
 if hash eza &>/dev/null; then
     LS_COMMAND="eza --icons"
-    alias ls='${LS_COMMAND} --icons'
-    alias l='${LS_COMMAND} --icons -F'
-    alias tree='${LS_COMMAND} --icons -T'
+    alias ls="${LS_COMMAND}"
+    alias l="${LS_COMMAND} -F"
+    alias tree="${LS_COMMAND} -T"
 else
     LS_COMMAND=ls
     if [[ "$(uname -s)" != "OpenBSD" ]]; then
