@@ -28,3 +28,6 @@ pdfrotate() {
     FILENAME=$(mktemp PDFROTATE.XXXXXXXX)
     qpdf --rotate=${1} ${2} ${FILENAME} && mv -f ${FILENAME} ${2}
 }
+
+# Force use of the terminal
+unset VISUAL
