@@ -51,7 +51,7 @@ fi
 
 # Eza is a nice replacement for standard ls, with some extra bells and whistles
 if hash eza &>/dev/null; then
-    LS_COMMAND="eza --icons"
+    LS_COMMAND="eza --icons=auto"
     alias ls="${LS_COMMAND}"
     alias l="${LS_COMMAND} -F"
     alias tree="${LS_COMMAND} -T"
