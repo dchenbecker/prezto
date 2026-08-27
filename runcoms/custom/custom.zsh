@@ -99,6 +99,9 @@ if [ -f ~/.proxmox_env ]; then
     . ~/.proxmox_env
 fi
 
+# I pretty much use 24 bit color terminals *everywhere*. This forces Emacs to agree
+export COLORTERM=truecolor
+
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
 alias ctags='ctags --languages=scala,java,python,puppet,kotlin,rust -R --exclude=.ensime_cache --exclude=.tox --exclude=.git'
