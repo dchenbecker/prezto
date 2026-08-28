@@ -29,39 +29,55 @@ zstyle ':prezto:load' zfunction 'zargs' 'zmv'
 
 # Set the Prezto modules to load (browse modules).
 # The order matters.
-if [[ $ZSH_VERSION > "5.0.2" ]]; then
-zstyle ':prezto:load' pmodule \
-  'environment' \
-  'terminal' \
-  'editor' \
-  'history' \
-  'directory' \
-  'spectrum' \
-  'utility' \
-  'ssh' \
-  'git' \
-  'node' \
-  'archive' \
-  'syntax-highlighting' \
-  'history-substring-search' \
-  'prompt' \
-  'completion'
+if [[ $ZSH_VERSION > "5.0.2" && "$(uname -s)" != "OpenBSD" ]]; then
+    zstyle ':prezto:load' pmodule \
+	   'environment' \
+	   'terminal' \
+	   'editor' \
+	   'history' \
+	   'directory' \
+	   'spectrum' \
+	   'gnu-utility' \
+	   'utility' \
+	   'completion' \
+	   'ssh' \
+	   'git' \
+	   'archive' \
+	   'syntax-highlighting' \
+	   'history-substring-search' \
+	   'prompt'
+elif [[ "$(uname -s)" = "OpenBSD" ]]; then
+    # utility and gnu-utility aren't working, so I've removed them here
+    zstyle ':prezto:load' pmodule \
+	   'environment' \
+	   'terminal' \
+	   'editor' \
+	   'history' \
+	   'directory' \
+	   'spectrum' \
+	   'completion' \
+	   'ssh' \
+	   'git' \
+	   'archive' \
+	   'syntax-highlighting' \
+	   'history-substring-search' \
+	   'prompt'
 else
-zstyle ':prezto:load' pmodule \
-  'environment' \
-  'terminal' \
-  'editor' \
-  'history' \
-  'directory' \
-  'spectrum' \
-  'utility' \
-  'ssh' \
-  'git' \
-  'node' \
-  'archive' \
-  'history-substring-search' \
-  'prompt' \
-  'completion'
+    zstyle ':prezto:load' pmodule \
+	   'environment' \
+	   'terminal' \
+	   'editor' \
+	   'history' \
+	   'directory' \
+	   'spectrum' \
+	   'gnu-utility' \
+	   'utility' \
+	   'completion' \
+	   'ssh' \
+	   'git' \
+	   'archive' \
+	   'history-substring-search' \
+	   'prompt'
 fi
 
 #
@@ -82,9 +98,6 @@ fi
 #
 # Editor
 #
-
-# Set the characters that are considered to be part of a word.
-# zstyle ':prezto:module:editor' wordchars '*?_-.[]~&;!#$%^(){}<>'
 
 # Set the key mapping style to 'emacs' or 'vi'.
 zstyle ':prezto:module:editor' key-bindings 'emacs'
@@ -134,18 +147,6 @@ zstyle ':prezto:module:gnu-utility' prefix 'g'
 
 # Set the search globbing flags.
 # zstyle ':prezto:module:history-substring-search' globbing-flags ''
-
-# Enable search case-sensitivity.
-# zstyle ':prezto:module:history-substring-search' case-sensitive 'yes'
-
-# Enable search for fuzzy matches.
-# zstyle ':prezto:module:history-substring-search' fuzzy 'yes'
-
-# Enable search uniqueness.
-# zstyle ':prezto:module:history-substring-search' unique 'yes'
-
-# Enable prefixed search.
-# zstyle ':prezto:module:history-substring-search' prefixed 'yes'
 
 #
 # macOS

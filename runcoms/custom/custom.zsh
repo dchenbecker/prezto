@@ -1,3 +1,8 @@
+# Add any go tools
+if [ -d ~/go/bin/ ]; then
+    path+=(~/go/bin)
+fi
+
 # Derek's OSX aliases
 if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
@@ -32,6 +37,18 @@ else
   export TERM=xterm-24bit
 fi
 
+# Add Nix if available
+if [ -d "/nix/var/nix/profiles/default/bin" ]; then
+    path+=/nix/var/nix/profiles/default/bin
+    path+=~/.nix-profile/bin
+fi
+
+# Add asdf if available
+if hash asdf > /dev/null; then
+    export ASDF_DATA_DIR=~/.asdf
+    path=($ASDF_DATA_DIR/shims $path)
+fi
+
 # We want Rust tools in our path (e.g. rg, eza)
 if [ -d "$HOME/.cargo/bin" ]; then
     path+="$HOME/.cargo/bin"
@@ -49,20 +66,27 @@ if hash viddy &>/dev/null; then
     alias watch="viddy"
 fi
 
+## Nicer watch replacement
+if hash viddy &>/dev/null; then
+    alias watch="viddy"
+fi
+
 # Special dircolors
 if [ -r ~/.dircolors ]; then
   eval "$(dircolors)"
 fi
 
-# Try out eza for a while and see if we like it...
+# Eza is a nice replacement for standard ls, with some extra bells and whistles
 if hash eza &>/dev/null; then
-    LS_COMMAND=eza
-    alias ls='eza'
-    alias l='eza -F'
-    alias tree='eza -T'
+    LS_COMMAND="eza --icons=auto"
+    alias ls="${LS_COMMAND}"
+    alias l="${LS_COMMAND} -F"
+    alias tree="${LS_COMMAND} -T"
 else
     LS_COMMAND=ls
-    alias ls='ls --color=auto'
+    if [[ "$(uname -s)" != "OpenBSD" ]]; then
+	alias ls='ls --color=auto'
+    fi
     alias l='ls -CF'
 fi
 
@@ -84,16 +108,34 @@ if hash yt-dlp &> /dev/null; then
     alias youtube-dl=yt-dlp
 fi
 
+# Set up Terraform completions if it's installed
+if [ -x /usr/bin/terraform ]; then
+    autoload -U +X bashcompinit && bashcompinit
+    complete -o nospace -C /usr/bin/terraform terraform
+fi
+
+# Set up GNU grep if available
+if grep --version |& grep -q GNU >& /dev/null; then
+    alias egrep='egrep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias grep='grep --color=auto'
+fi
+
+# Load Proxmox environment if available
+if [ -f ~/.proxmox_env ]; then
+    . ~/.proxmox_env
+fi
+
+# I pretty much use 24 bit color terminals *everywhere*. This forces Emacs to agree
+export COLORTERM=truecolor
+
 alias cstags='ctags -eR --languages="c#"'
 alias cssh='~/.oh-my-zsh/custom/tmux-cssh/tmux-cssh -ss synchome.sh'
 alias ctags='ctags --languages=scala,java,python,puppet,kotlin,rust -R --exclude=.ensime_cache --exclude=.tox --exclude=.git'
 alias curlapi="curl -H 'Content-Type: application/json'"
-alias egrep='egrep --color=auto'
 alias etags='ctags -e'
-alias fgrep='fgrep --color=auto'
 alias gfa='git fetch --all -p'
 alias go='git checkout'
-alias grep='grep --color=auto'
 alias mv='mv -i'
 alias qe="emacs -q -nw"
 alias revelation='keepassx'
@@ -110,7 +152,7 @@ alias qp="qpdfview"
 export ALTERNATE_EDITOR=""
 
 # I want globbing with rsync, prezto
-unalias rsync
+unalias rsync >& /dev/null
 
 # Enable ssh-style host completion for syh
 compdef _hosts synchome.sh
@@ -149,9 +191,19 @@ export LESS='-F -g -i -M -R -X -z-4'
 # SBT settings, because the Typesafe launcher is borken
 export SBT_OPTS="-Xms512M -Xmx8G -Xss1M -XX:MaxMetaspaceSize=2G"
 
-# Set up asdf if available
-if hash asdf &>/dev/null; then
-    path=(~/.asdf/shims $path)
+# Use ghcup for Haskell stuff if available
+if [ -r ~/.ghcup/env ]; then
+    source ~/.ghcup/env
+fi
+
+# Set up Nix env if available
+if [ -r ~/.nix-profile/etc/profile.d/nix.sh ]; then
+    source ~/.nix-profile/etc/profile.d/nix.sh
+fi
+
+# Set up direnv if available
+if which direnv >& /dev/null ; then
+    eval "$(direnv hook zsh)"
 fi
 
 # Set up direnv if available
