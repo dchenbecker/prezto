@@ -17,6 +17,7 @@ mikemux() {
 }
 
 cdpath+=/home/software/tools
+cdpath+=/home/software/projects
 
 path+=/home/software/scala/bin
 path+=~/.dotnet/tools
