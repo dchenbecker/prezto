@@ -19,6 +19,9 @@ fun winopen() {
     /mnt/c/Windows/explorer.exe $(wslpath -w $1)
 }
 
+# Use Windows Chrome for browser URLs from WSL2
+export BROWSER="/mnt/c/PROGRA~1/Google/Chrome/Application/chrome.exe"
+
 # Ensure font settings and keyboard maps for X11
 export DISPLAY=localhost:0
 xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.CSCO 
