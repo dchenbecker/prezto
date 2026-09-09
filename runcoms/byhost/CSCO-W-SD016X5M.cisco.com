@@ -24,5 +24,4 @@ export BROWSER="/mnt/c/PROGRA~1/Google/Chrome/Application/chrome.exe"
 
 # Ensure font settings and keyboard maps for X11
 export DISPLAY=localhost:0
-xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.CSCO 
-xrdb -merge ~/.zprezto/runcoms/byhost/Xresources.CSCO 
+xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.rightalt

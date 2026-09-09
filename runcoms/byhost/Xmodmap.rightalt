@@ -1,0 +1,9 @@
+! Map Left Alt to Meta, keep it under mod1
+clear mod1
+keycode 64 = Meta_L
+add mod1 = Meta_L
+
+! Map Right Alt to Alt, isolate it under mod3
+clear mod3
+keycode 108 = Alt_R
+add mod3 = Alt_R
