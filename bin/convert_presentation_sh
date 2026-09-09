@@ -1,0 +1,40 @@
+#!/bin/zsh
+
+# Default CRF value
+CRF=26
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 -i <input_file> -o <output_file> [-c <crf_value>]"
+    echo "  -i : Input video file (e.g., recording.mp4)"
+    echo "  -o : Output filename (e.g., output.mp4)"
+    echo "  -c : Optional CRF value (default: 26)"
+    exit 1
+}
+
+# Parse options
+while getopts "i:o:c:" opt; do
+    case "$opt" in
+        i) INPUT="$OPTARG" ;;
+        o) OUTPUT="$OPTARG" ;;
+        c) CRF="$OPTARG" ;;
+        *) usage ;;
+    esac
+done
+
+# Validate required arguments
+if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
+    echo "Error: Input and output files are required."
+    usage
+fi
+
+# Run FFmpeg command
+ffmpeg -i "$INPUT" \
+  -vf "mpdecimate,scale=-2:1080:flags=lanczos" \
+  -c:v libx265 -crf "$CRF" -preset slow \
+  -tune animation \
+  -x265-params "keyint=600:min-keyint=60:scenecut=60" \
+  -vsync vfr \
+  -tag:v hvc1 \
+  -c:a copy \
+  "$OUTPUT"
