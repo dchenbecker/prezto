@@ -31,6 +31,7 @@ Environment:
                                ~/.zprezto/bin/codex-with-env.
   CODEX_RESUME_EXCLUDE_SESSION Session ID to omit. Defaults to CODEX_THREAD_ID or
                                CODEX_SESSION_ID when set.
+  CODEX_RESUME_DIALOG          Dialog executable override. Defaults to dialog.
 EOF
 }
 
@@ -77,6 +78,7 @@ wsl_bin="${CODEX_RESUME_WSL:-}"
 wsl_command="${CODEX_RESUME_WSL_COMMAND:-wsl.exe}"
 codex_command="${CODEX_RESUME_CODEX:-$HOME/.zprezto/bin/codex-with-env}"
 exclude_session="${CODEX_RESUME_EXCLUDE_SESSION:-${CODEX_THREAD_ID:-${CODEX_SESSION_ID:-}}}"
+dialog_command="${CODEX_RESUME_DIALOG:-dialog}"
 dry_run=false
 
 while (($# > 0)); do
@@ -113,6 +115,7 @@ trusted_working_dir="$HOME/Repos"
   exit 1
 }
 cd "$trusted_working_dir"
+printf 'Preparing recent Codex session restore from %s...\n' "$trusted_working_dir"
 
 if [[ "$dry_run" != true ]]; then
   if [[ -z "$wt_bin" ]]; then
@@ -145,8 +148,16 @@ fi
 cutoff=$(( $(date +%s) - max_age_hours * 3600 ))
 restored=0
 skipped=0
+declare -a candidate_ids candidate_distros candidate_working_dirs candidate_labels candidate_activity
+declare -A candidate_indexes
+candidate_ids=()
+candidate_distros=()
+candidate_working_dirs=()
+candidate_labels=()
+candidate_activity=()
+candidate_indexes=()
 
-process_session() {
+queue_session() {
   local last_activity="$1"
   local distro="$2"
   local session_id="$3"
@@ -179,31 +190,44 @@ process_session() {
     return
   fi
 
-  if [[ "$dry_run" == true ]]; then
-    local activity_time
-    activity_time="$(date -d "@$last_activity" '+%Y-%m-%d %H:%M:%S %Z')"
-    printf 'Would open %-30s %s  [%s; last activity: %s]\n' \
-      "$label" "$session_id" "$working_dir" "$activity_time"
-  else
-    local -a wt_options
-    wt_options=(-w "$terminal_window" new-tab)
-    if [[ -n "$terminal_profile" ]]; then
-      wt_options+=(--profile "$terminal_profile")
-    fi
-    wt_options+=(--title "Codex: $label")
-
-    "$wt_bin" "${wt_options[@]}" \
-      "$wsl_command" -d "$distro" \
-        --cd "$working_dir" \
-        -- "$codex_command" resume "$session_id" </dev/null
+  if [[ -n "${candidate_indexes[$session_id]:-}" ]]; then
+    return
   fi
+
+  candidate_indexes["$session_id"]="${#candidate_ids[@]}"
+  candidate_ids+=("$session_id")
+  candidate_distros+=("$distro")
+  candidate_working_dirs+=("$working_dir")
+  candidate_labels+=("$label")
+  candidate_activity+=("$last_activity")
+}
+
+restore_session() {
+  local index="$1"
+  local session_id="${candidate_ids[$index]}"
+  local distro="${candidate_distros[$index]}"
+  local working_dir="${candidate_working_dirs[$index]}"
+  local label="${candidate_labels[$index]}"
+  local -a wt_options
+
+  wt_options=(-w "$terminal_window" new-tab)
+  if [[ -n "$terminal_profile" ]]; then
+    wt_options+=(--profile "$terminal_profile")
+  fi
+  wt_options+=(--title "Codex: $label")
+
+  "$wt_bin" "${wt_options[@]}" \
+    "$wsl_command" -d "$distro" \
+      --cd "$working_dir" \
+      -- "$codex_command" resume "$session_id" </dev/null
 
   ((restored += 1))
 }
 
 if [[ -r "$registry" ]]; then
+  printf 'Reading Codex session registry: %s\n' "$registry"
   while IFS=$'\t' read -r last_activity distro session_id working_dir label _extra; do
-    process_session \
+    queue_session \
       "${last_activity:-}" \
       "${distro:-}" \
       "${session_id:-}" \
@@ -224,6 +248,8 @@ else
   }
 
   declare -A session_working_dir session_last_activity
+
+  printf 'Scanning Codex transcripts for recent user sessions; this may take a few seconds...\n'
 
   # The transcript directory can contain guardian-review records and multiple
   # files for a single session. Use user-session metadata and the final event
@@ -254,10 +280,10 @@ else
     fi
   done < <(find "$transcript_dir" -type f -name '*.jsonl' -print0)
 
-  echo "Registry not found; discovering recent user sessions from local Codex transcripts." >&2
+  printf 'Validating discovered session records...\n'
   for session_id in "${!session_working_dir[@]}"; do
     working_dir="${session_working_dir[$session_id]}"
-    process_session \
+    queue_session \
       "${session_last_activity[$session_id]}" \
       "$default_distro" \
       "$session_id" \
@@ -267,7 +293,50 @@ else
 fi
 
 if [[ "$dry_run" == true ]]; then
-  printf 'Would restore %d session(s); skipped %d.\n' "$restored" "$skipped"
+  for index in "${!candidate_ids[@]}"; do
+    activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M:%S %Z')"
+    printf 'Would open %-30s %s  [%s; last activity: %s]\n' \
+      "${candidate_labels[$index]}" "${candidate_ids[$index]}" \
+      "${candidate_working_dirs[$index]}" "$activity_time"
+  done
+  printf 'Would restore %d session(s); skipped %d.\n' "${#candidate_ids[@]}" "$skipped"
 else
+  if ((${#candidate_ids[@]} > 0)); then
+    command -v "$dialog_command" >/dev/null 2>&1 || {
+      echo "The dialog utility is required to select sessions: $dialog_command" >&2
+      exit 1
+    }
+
+    dialog_items=()
+    for index in "${!candidate_ids[@]}"; do
+      dialog_items+=(
+        "${candidate_ids[$index]}"
+        "${candidate_labels[$index]} — ${candidate_working_dirs[$index]}"
+        on
+      )
+    done
+
+    printf 'Found %d eligible session(s); opening the selection dialog...\n' "${#candidate_ids[@]}"
+    if selected_sessions="$("$dialog_command" \
+      --clear \
+      --separate-output \
+      --stdout \
+      --title "Resume recent Codex sessions" \
+      --checklist "Select sessions to restore (all are selected by default):" \
+      0 0 0 \
+      "${dialog_items[@]}"
+    )"; then
+      if [[ -n "$selected_sessions" ]]; then
+        printf 'Launching selected Codex session(s)...\n'
+        while IFS= read -r session_id; do
+          [[ -n "$session_id" ]] || continue
+          restore_session "${candidate_indexes[$session_id]}"
+        done <<< "$selected_sessions"
+      fi
+    else
+      echo "Session restore canceled; opened 0 session(s); skipped $skipped." >&2
+      exit 0
+    fi
+  fi
   printf 'Opened %d session(s); skipped %d.\n' "$restored" "$skipped"
 fi
