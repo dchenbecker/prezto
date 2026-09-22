@@ -148,6 +148,9 @@ alias upgrade='sudo zsh -c "apt update && apt upgrade && apt autoremove"'
 alias vi="\$EDITOR"
 alias qp="qpdfview"
 
+# Load Codex plugin credentials only for Codex invocations.
+alias codex='~/.zprezto/bin/codex-with-env'
+
 # Make emacs start a new server if it's not already running
 export ALTERNATE_EDITOR=""
 
