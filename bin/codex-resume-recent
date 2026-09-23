@@ -19,6 +19,7 @@ Options:
 
 Environment:
   CODEX_SESSION_REGISTRY       Registry path. Defaults to ~/.codex/session-registry.tsv.
+  CODEX_SESSION_INDEX           Session title index. Defaults to ~/.codex/session_index.jsonl.
   CODEX_RESUME_MAX_AGE_HOURS   Default age cutoff. Defaults to 72.
   CODEX_RESUME_DISTRO          WSL distro used when discovering sessions. Defaults to the
                                current WSL distro.
@@ -69,6 +70,7 @@ resolve_windows_command() {
 
 registry="${CODEX_SESSION_REGISTRY:-$HOME/.codex/session-registry.tsv}"
 codex_home="${CODEX_HOME:-$HOME/.codex}"
+session_index="${CODEX_SESSION_INDEX:-$codex_home/session_index.jsonl}"
 max_age_hours="${CODEX_RESUME_MAX_AGE_HOURS:-72}"
 terminal_window="${CODEX_RESUME_TERMINAL_WINDOW:-0}"
 terminal_profile="${CODEX_RESUME_TERMINAL_PROFILE:-${WT_PROFILE_ID:-}}"
@@ -148,14 +150,29 @@ fi
 cutoff=$(( $(date +%s) - max_age_hours * 3600 ))
 restored=0
 skipped=0
-declare -a candidate_ids candidate_distros candidate_working_dirs candidate_labels candidate_activity
+declare -a candidate_ids candidate_distros candidate_working_dirs candidate_labels candidate_dialog_keys candidate_activity
 declare -A candidate_indexes
 candidate_ids=()
 candidate_distros=()
 candidate_working_dirs=()
 candidate_labels=()
+candidate_dialog_keys=()
 candidate_activity=()
 candidate_indexes=()
+declare -A session_titles
+
+if [[ -r "$session_index" ]] && command -v jq >/dev/null 2>&1; then
+  while IFS=$'\t' read -r session_id title; do
+    [[ -n "$session_id" && -n "$title" ]] || continue
+    session_titles["$session_id"]="$title"
+  done < <(
+    jq -r '
+      select(.id != null and .thread_name != null)
+      | [(.id | tostring), (.thread_name | tostring)]
+      | @tsv
+    ' "$session_index"
+  )
+fi
 
 queue_session() {
   local last_activity="$1"
@@ -163,8 +180,13 @@ queue_session() {
   local session_id="$3"
   local working_dir="$4"
   local label="$5"
+  local title
+  local display_label
+  local dialog_key
 
   [[ -z "$session_id" || "${session_id:0:1}" == "#" ]] && return
+
+  title="${session_titles[$session_id]:-}"
 
   if ! [[ "$last_activity" =~ ^[0-9]+$ ]]; then
     echo "Skipping malformed session record: ${session_id:-unknown}" >&2
@@ -182,7 +204,7 @@ queue_session() {
     return
   fi
 
-  label="${label:-$session_id}"
+  label="${label:-${working_dir##*/}}"
 
   if [[ ! -d "$working_dir" ]]; then
     echo "Skipping $label: working directory does not exist: $working_dir" >&2
@@ -194,11 +216,15 @@ queue_session() {
     return
   fi
 
+  display_label="${title:-$label}"
+  dialog_key="$(( ${#candidate_ids[@]} + 1 ))"
   candidate_indexes["$session_id"]="${#candidate_ids[@]}"
+  candidate_indexes["$dialog_key"]="${#candidate_ids[@]}"
   candidate_ids+=("$session_id")
   candidate_distros+=("$distro")
   candidate_working_dirs+=("$working_dir")
-  candidate_labels+=("$label")
+  candidate_labels+=("$display_label")
+  candidate_dialog_keys+=("$dialog_key")
   candidate_activity+=("$last_activity")
 }
 
@@ -295,9 +321,8 @@ fi
 if [[ "$dry_run" == true ]]; then
   for index in "${!candidate_ids[@]}"; do
     activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M:%S %Z')"
-    printf 'Would open %-30s %s  [%s; last activity: %s]\n' \
-      "${candidate_labels[$index]}" "${candidate_ids[$index]}" \
-      "${candidate_working_dirs[$index]}" "$activity_time"
+    printf 'Would open %s — %s  [last activity: %s]\n' \
+      "${candidate_labels[$index]}" "${candidate_working_dirs[$index]}" "$activity_time"
   done
   printf 'Would restore %d session(s); skipped %d.\n' "${#candidate_ids[@]}" "$skipped"
 else
@@ -309,9 +334,17 @@ else
 
     dialog_items=()
     for index in "${!candidate_ids[@]}"; do
+      activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M %Z')"
+      working_dir_label="${candidate_working_dirs[$index]##*/}"
+      dialog_label="${candidate_labels[$index]}"
+      if [[ "$dialog_label" == "$working_dir_label" ]]; then
+        dialog_label+=" — last activity: $activity_time"
+      else
+        dialog_label+=" — $working_dir_label — last activity: $activity_time"
+      fi
       dialog_items+=(
-        "${candidate_ids[$index]}"
-        "${candidate_labels[$index]} — ${candidate_working_dirs[$index]}"
+        "${candidate_dialog_keys[$index]}"
+        "$dialog_label"
         on
       )
     done
@@ -328,9 +361,10 @@ else
     )"; then
       if [[ -n "$selected_sessions" ]]; then
         printf 'Launching selected Codex session(s)...\n'
-        while IFS= read -r session_id; do
-          [[ -n "$session_id" ]] || continue
-          restore_session "${candidate_indexes[$session_id]}"
+        while IFS= read -r dialog_key; do
+          [[ -n "$dialog_key" ]] || continue
+          [[ -n "${candidate_indexes[$dialog_key]:-}" ]] || continue
+          restore_session "${candidate_indexes[$dialog_key]}"
         done <<< "$selected_sessions"
       fi
     else
