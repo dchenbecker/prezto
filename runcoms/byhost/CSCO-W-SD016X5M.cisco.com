@@ -25,3 +25,8 @@ export BROWSER="/mnt/c/PROGRA~1/Google/Chrome/Application/chrome.exe"
 # Ensure font settings and keyboard maps for X11
 export DISPLAY=localhost:0
 xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.rightalt
+
+# Override so that we use the right socket
+export EDITOR="emacsclient -s /tmp/realdcb/emacs1000/server -nw -c"
+export VISUAL="$EDITOR"
+
