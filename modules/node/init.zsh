@@ -19,7 +19,7 @@ if (( $#local_nodenv_paths || $+commands[nodenv] )); then
   # Ensure manually installed nodenv is added to path when present.
   [[ -s $local_nodenv_paths[1] ]] && path=($local_nodenv_paths[1]:h $path)
 
-  eval "$(nodenv init - zsh)"
+  eval "$(nodenv init - --no-rehash zsh)"
 
 # Load manually installed nvm into the shell session.
 elif (( $#local_nvm_paths )); then
@@ -48,18 +48,20 @@ N_PREFIX="${XDG_CONFIG_HOME:-$HOME/.config}/n"  # The path to 'n' cache.
 # Aliases
 #
 
-# npm
-alias npmi='npm install'
-alias npml='npm list'
-alias npmo='npm outdated'
-alias npmp='npm publish'
-alias npmP='npm prune'
-alias npmr='npm run'
-alias npms='npm search'
-alias npmt='npm test'
-alias npmu='npm update'
-alias npmx='npm uninstall'
+if ! zstyle -t ':prezto:module:node:alias' skip; then
+  # npm
+  alias npmi='npm install'
+  alias npml='npm list'
+  alias npmo='npm outdated'
+  alias npmp='npm publish'
+  alias npmP='npm prune'
+  alias npmr='npm run'
+  alias npms='npm search'
+  alias npmt='npm test'
+  alias npmu='npm update'
+  alias npmx='npm uninstall'
 
-alias npmci='npm ci'
-alias npmcit='npm cit'
-alias npmit='npm it'
+  alias npmci='npm ci'
+  alias npmcit='npm cit'
+  alias npmit='npm it'
+fi
