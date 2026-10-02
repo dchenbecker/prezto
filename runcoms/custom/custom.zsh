@@ -7,13 +7,34 @@ fi
 if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
+
+  export path=(
+      ~/.nodenv/shims
+      /opt/homebrew/bin
+      /opt/homebrew/opt/coreutils/libexec/gnubin
+      $path
+      /usr/local/texlive/2024/bin/universal-darwin
+      /Applications/Wireshark.app/Contents/MacOS
+  )
+
+  export manpath=(
+      /opt/homebrew/opt/coreutils/libexec/gnuman
+      /opt/homebrew/share/man
+      /usr/share/man
+  )
+
+  export EMACS_SOCKET_NAME=/tmp/${USER}/emacs${UID}/server
   export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-  export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-  export MANPATH="/usr/local/opt/coreutils/libexec/gnuman:$PATH"
+  alias en="${EDITOR} -nw"
+  export VISUAL="$EDITOR"
+
   alias tar='gtar'
   alias dircolors='gdircolors'
 else
   alias sbt='nocorrect sbt'
+
+  # Assuming 24 bit terminal under Windows and Linux
+  export TERM=xterm-24bit
 fi
 
 # Add Nix if available
@@ -37,6 +58,12 @@ fi
 if hash bat &>/dev/null; then
     alias cat="bat --pager=never"
     alias less="bat"
+    export BAT_THEME="Solarized (light)"
+fi
+
+## Nicer watch replacement
+if hash viddy &>/dev/null; then
+    alias watch="viddy"
 fi
 
 ## Nicer watch replacement
@@ -121,6 +148,9 @@ alias upgrade='sudo zsh -c "apt update && apt upgrade && apt autoremove"'
 alias vi="\$EDITOR"
 alias qp="qpdfview"
 
+# Load Codex plugin credentials only for Codex invocations.
+alias codex='~/.zprezto/bin/codex-with-env'
+
 # Make emacs start a new server if it's not already running
 export ALTERNATE_EDITOR=""
 
@@ -179,3 +209,12 @@ if which direnv >& /dev/null ; then
     eval "$(direnv hook zsh)"
 fi
 
+# Set up direnv if available
+if hash direnv &>/dev/null ; then
+    eval "$(direnv hook zsh)"
+fi
+
+# Set up podman if available
+[[ -d /opt/podman ]] && {
+    path+=/opt/podman/bin
+}

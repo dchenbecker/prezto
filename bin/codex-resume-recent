@@ -1,0 +1,376 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: codex-resume-recent [OPTIONS]
+
+Open recent Codex sessions in separate Windows Terminal tabs.
+
+The preferred registry is a tab-separated file with these columns:
+
+  last_activity_epoch  distro  session_id  working_directory  label
+
+Options:
+  --max-age-hours N  Restore sessions active within the last N hours.
+  --dry-run          Print tabs that would be opened without opening them.
+  -h, --help         Show this help.
+
+Environment:
+  CODEX_SESSION_REGISTRY       Registry path. Defaults to ~/.codex/session-registry.tsv.
+  CODEX_SESSION_INDEX           Session title index. Defaults to ~/.codex/session_index.jsonl.
+  CODEX_RESUME_MAX_AGE_HOURS   Default age cutoff. Defaults to 72.
+  CODEX_RESUME_DISTRO          WSL distro used when discovering sessions. Defaults to the
+                               current WSL distro.
+  CODEX_RESUME_TERMINAL_WINDOW Windows Terminal window target. Defaults to 0.
+  CODEX_RESUME_TERMINAL_PROFILE Windows Terminal profile name or ID. Defaults to WT_PROFILE_ID.
+  CODEX_RESUME_WT              Windows Terminal executable override.
+  CODEX_RESUME_WSL             WSL executable used to discover the default distro.
+  CODEX_RESUME_WSL_COMMAND     WSL command passed to Windows Terminal. Defaults to wsl.exe.
+  CODEX_RESUME_CODEX           Codex launcher used in restored tabs. Defaults to
+                               ~/.zprezto/bin/codex-with-env.
+  CODEX_RESUME_EXCLUDE_SESSION Session ID to omit. Defaults to CODEX_THREAD_ID or
+                               CODEX_SESSION_ID when set.
+  CODEX_RESUME_DIALOG          Dialog executable override. Defaults to dialog.
+EOF
+}
+
+resolve_windows_command() {
+  local command_name="$1"
+  local candidate
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    command -v "$command_name"
+    return
+  fi
+
+  case "$command_name" in
+    wt.exe)
+      # WindowsApps contains the per-user execution alias. WSL may not append
+      # Windows paths to PATH, so search the mounted user profiles directly.
+      for candidate in /mnt/c/Users/*/AppData/Local/Microsoft/WindowsApps/wt.exe; do
+        if [[ -x "$candidate" ]]; then
+          printf '%s\n' "$candidate"
+          return
+        fi
+      done
+      ;;
+    wsl.exe)
+      candidate=/mnt/c/Windows/System32/wsl.exe
+      if [[ -x "$candidate" ]]; then
+        printf '%s\n' "$candidate"
+        return
+      fi
+      ;;
+  esac
+
+  return 1
+}
+
+registry="${CODEX_SESSION_REGISTRY:-$HOME/.codex/session-registry.tsv}"
+codex_home="${CODEX_HOME:-$HOME/.codex}"
+session_index="${CODEX_SESSION_INDEX:-$codex_home/session_index.jsonl}"
+max_age_hours="${CODEX_RESUME_MAX_AGE_HOURS:-72}"
+terminal_window="${CODEX_RESUME_TERMINAL_WINDOW:-0}"
+terminal_profile="${CODEX_RESUME_TERMINAL_PROFILE:-${WT_PROFILE_ID:-}}"
+default_distro="${CODEX_RESUME_DISTRO:-${WSL_DISTRO_NAME:-}}"
+wt_bin="${CODEX_RESUME_WT:-}"
+wsl_bin="${CODEX_RESUME_WSL:-}"
+wsl_command="${CODEX_RESUME_WSL_COMMAND:-wsl.exe}"
+codex_command="${CODEX_RESUME_CODEX:-$HOME/.zprezto/bin/codex-with-env}"
+exclude_session="${CODEX_RESUME_EXCLUDE_SESSION:-${CODEX_THREAD_ID:-${CODEX_SESSION_ID:-}}}"
+dialog_command="${CODEX_RESUME_DIALOG:-dialog}"
+dry_run=false
+
+while (($# > 0)); do
+  case "$1" in
+    --max-age-hours)
+      (($# >= 2)) || { echo "--max-age-hours requires a value" >&2; exit 2; }
+      max_age_hours="$2"
+      shift 2
+      ;;
+    --dry-run)
+      dry_run=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+[[ "$max_age_hours" =~ ^[0-9]+$ ]] || {
+  echo "max age must be a non-negative integer number of hours: $max_age_hours" >&2
+  exit 2
+}
+
+trusted_working_dir="$HOME/Repos"
+[[ -d "$trusted_working_dir" ]] || {
+  echo "Trusted working directory does not exist: $trusted_working_dir" >&2
+  exit 1
+}
+cd "$trusted_working_dir"
+printf 'Preparing recent Codex session restore from %s...\n' "$trusted_working_dir"
+
+if [[ "$dry_run" != true ]]; then
+  if [[ -z "$wt_bin" ]]; then
+    wt_bin="$(resolve_windows_command wt.exe || true)"
+  fi
+  if [[ -z "$wsl_bin" ]]; then
+    wsl_bin="$(resolve_windows_command wsl.exe || true)"
+  fi
+fi
+
+if [[ -z "$default_distro" ]]; then
+  if [[ -n "$wsl_bin" ]]; then
+    default_distro="$($wsl_bin -l -q 2>/dev/null | tr -d '\r' | head -n 1)"
+  elif [[ "$dry_run" == true ]]; then
+    default_distro="current"
+  fi
+fi
+
+if [[ "$dry_run" != true ]] && [[ -z "$wt_bin" || -z "$wsl_bin" ]]; then
+  echo "Windows Terminal or WSL CLI is not available in this WSL environment." >&2
+  echo "Set CODEX_RESUME_WT and CODEX_RESUME_WSL to their executable paths if needed." >&2
+  exit 1
+fi
+
+[[ -n "$default_distro" ]] || {
+  echo "Unable to determine the WSL distro. Set CODEX_RESUME_DISTRO explicitly." >&2
+  exit 1
+}
+
+cutoff=$(( $(date +%s) - max_age_hours * 3600 ))
+restored=0
+skipped=0
+declare -a candidate_ids candidate_distros candidate_working_dirs candidate_labels candidate_dialog_keys candidate_activity
+declare -A candidate_indexes
+candidate_ids=()
+candidate_distros=()
+candidate_working_dirs=()
+candidate_labels=()
+candidate_dialog_keys=()
+candidate_activity=()
+candidate_indexes=()
+declare -A session_titles
+
+if [[ -r "$session_index" ]] && command -v jq >/dev/null 2>&1; then
+  while IFS=$'\t' read -r session_id title; do
+    [[ -n "$session_id" && -n "$title" ]] || continue
+    session_titles["$session_id"]="$title"
+  done < <(
+    jq -r '
+      select(.id != null and .thread_name != null)
+      | [(.id | tostring), (.thread_name | tostring)]
+      | @tsv
+    ' "$session_index"
+  )
+fi
+
+queue_session() {
+  local last_activity="$1"
+  local distro="$2"
+  local session_id="$3"
+  local working_dir="$4"
+  local label="$5"
+  local title
+  local display_label
+  local dialog_key
+
+  [[ -z "$session_id" || "${session_id:0:1}" == "#" ]] && return
+
+  title="${session_titles[$session_id]:-}"
+
+  if ! [[ "$last_activity" =~ ^[0-9]+$ ]]; then
+    echo "Skipping malformed session record: ${session_id:-unknown}" >&2
+    ((skipped += 1))
+    return
+  fi
+
+  if (( last_activity < cutoff )); then
+    return
+  fi
+
+  if [[ -z "$distro" || -z "$working_dir" ]]; then
+    echo "Skipping incomplete session record: $session_id" >&2
+    ((skipped += 1))
+    return
+  fi
+
+  label="${label:-${working_dir##*/}}"
+
+  if [[ ! -d "$working_dir" ]]; then
+    echo "Skipping $label: working directory does not exist: $working_dir" >&2
+    ((skipped += 1))
+    return
+  fi
+
+  if [[ -n "${candidate_indexes[$session_id]:-}" ]]; then
+    return
+  fi
+
+  display_label="${title:-$label}"
+  dialog_key="$(( ${#candidate_ids[@]} + 1 ))"
+  candidate_indexes["$session_id"]="${#candidate_ids[@]}"
+  candidate_indexes["$dialog_key"]="${#candidate_ids[@]}"
+  candidate_ids+=("$session_id")
+  candidate_distros+=("$distro")
+  candidate_working_dirs+=("$working_dir")
+  candidate_labels+=("$display_label")
+  candidate_dialog_keys+=("$dialog_key")
+  candidate_activity+=("$last_activity")
+}
+
+restore_session() {
+  local index="$1"
+  local session_id="${candidate_ids[$index]}"
+  local distro="${candidate_distros[$index]}"
+  local working_dir="${candidate_working_dirs[$index]}"
+  local label="${candidate_labels[$index]}"
+  local -a wt_options
+
+  wt_options=(-w "$terminal_window" new-tab)
+  if [[ -n "$terminal_profile" ]]; then
+    wt_options+=(--profile "$terminal_profile")
+  fi
+  wt_options+=(--title "Codex: $label")
+
+  "$wt_bin" "${wt_options[@]}" \
+    "$wsl_command" -d "$distro" \
+      --cd "$working_dir" \
+      -- "$codex_command" resume "$session_id" </dev/null
+
+  ((restored += 1))
+}
+
+if [[ -r "$registry" ]]; then
+  printf 'Reading Codex session registry: %s\n' "$registry"
+  while IFS=$'\t' read -r last_activity distro session_id working_dir label _extra; do
+    queue_session \
+      "${last_activity:-}" \
+      "${distro:-}" \
+      "${session_id:-}" \
+      "${working_dir:-}" \
+      "${label:-}"
+  done < "$registry"
+else
+  transcript_dir="$codex_home/sessions"
+
+  [[ -d "$transcript_dir" ]] || {
+    echo "Codex session registry not found and transcript directory is unavailable: $transcript_dir" >&2
+    exit 1
+  }
+
+  command -v jq >/dev/null 2>&1 || {
+    echo "jq is required to discover sessions when the registry is absent." >&2
+    exit 1
+  }
+
+  declare -A session_working_dir session_last_activity
+
+  printf 'Scanning Codex transcripts for recent user sessions; this may take a few seconds...\n'
+
+  # The transcript directory can contain guardian-review records and multiple
+  # files for a single session. Use user-session metadata and the final event
+  # timestamp rather than filesystem mtimes, then deduplicate by session ID.
+  while IFS= read -r -d '' transcript; do
+    metadata="$(jq -r '
+      select(.type == "session_meta")
+      | select((.payload.thread_source // "user") == "user")
+      | [
+          (.payload.id // .payload.session_id),
+          (.payload.cwd // "")
+        ]
+      | @tsv
+    ' "$transcript" | head -n 1)"
+    [[ -n "$metadata" ]] || continue
+
+    IFS=$'\t' read -r session_id working_dir <<< "$metadata"
+    [[ -n "$session_id" && "$session_id" != "$exclude_session" ]] || continue
+    session_timestamp="$(jq -r 'select(.timestamp != null) | .timestamp' "$transcript" | tail -n 1)"
+    if [[ -n "$session_timestamp" ]]; then
+      last_activity="$(date -d "$session_timestamp" +%s)"
+    else
+      last_activity="$(stat -c '%Y' "$transcript")"
+    fi
+    if [[ -z "${session_last_activity[$session_id]:-}" || "$last_activity" -gt "${session_last_activity[$session_id]}" ]]; then
+      session_working_dir["$session_id"]="$working_dir"
+      session_last_activity["$session_id"]="$last_activity"
+    fi
+  done < <(find "$transcript_dir" -type f -name '*.jsonl' -print0)
+
+  printf 'Validating discovered session records...\n'
+  for session_id in "${!session_working_dir[@]}"; do
+    working_dir="${session_working_dir[$session_id]}"
+    queue_session \
+      "${session_last_activity[$session_id]}" \
+      "$default_distro" \
+      "$session_id" \
+      "$working_dir" \
+      "${working_dir##*/}"
+  done
+fi
+
+if [[ "$dry_run" == true ]]; then
+  for index in "${!candidate_ids[@]}"; do
+    activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M:%S %Z')"
+    printf 'Would open %s — %s  [last activity: %s]\n' \
+      "${candidate_labels[$index]}" "${candidate_working_dirs[$index]}" "$activity_time"
+  done
+  printf 'Would restore %d session(s); skipped %d.\n' "${#candidate_ids[@]}" "$skipped"
+else
+  if ((${#candidate_ids[@]} > 0)); then
+    command -v "$dialog_command" >/dev/null 2>&1 || {
+      echo "The dialog utility is required to select sessions: $dialog_command" >&2
+      exit 1
+    }
+
+    dialog_items=()
+    for index in "${!candidate_ids[@]}"; do
+      activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M %Z')"
+      working_dir_label="${candidate_working_dirs[$index]##*/}"
+      dialog_label="${candidate_labels[$index]}"
+      if [[ "$dialog_label" == "$working_dir_label" ]]; then
+        dialog_label+=" — last activity: $activity_time"
+      else
+        dialog_label+=" — $working_dir_label — last activity: $activity_time"
+      fi
+      dialog_items+=(
+        "${candidate_dialog_keys[$index]}"
+        "$dialog_label"
+        on
+      )
+    done
+
+    printf 'Found %d eligible session(s); opening the selection dialog...\n' "${#candidate_ids[@]}"
+    if selected_sessions="$("$dialog_command" \
+      --clear \
+      --separate-output \
+      --stdout \
+      --title "Resume recent Codex sessions" \
+      --checklist "Select sessions to restore (all are selected by default):" \
+      0 0 0 \
+      "${dialog_items[@]}"
+    )"; then
+      if [[ -n "$selected_sessions" ]]; then
+        printf 'Launching selected Codex session(s)...\n'
+        while IFS= read -r dialog_key; do
+          [[ -n "$dialog_key" ]] || continue
+          [[ -n "${candidate_indexes[$dialog_key]:-}" ]] || continue
+          restore_session "${candidate_indexes[$dialog_key]}"
+        done <<< "$selected_sessions"
+      fi
+    else
+      echo "Session restore canceled; opened 0 session(s); skipped $skipped." >&2
+      exit 0
+    fi
+  fi
+  printf 'Opened %d session(s); skipped %d.\n' "$restored" "$skipped"
+fi

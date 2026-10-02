@@ -1,0 +1,28 @@
+#!/usr/bin/env zsh
+
+# Run Codex with credentials loaded only into this process tree.
+set -euo pipefail
+
+codex_env_file="${CODEX_ENV_FILE:-$HOME/.config/te-ai-agents/codex.env}"
+
+if [[ ! -r "$codex_env_file" ]]; then
+  print -u2 "Codex environment file not found or unreadable: $codex_env_file"
+  exit 1
+fi
+
+# The environment file is trusted shell syntax. Export every assignment made
+# while sourcing it so Codex and the MCP/plugin processes it starts can use it.
+set -a
+source "$codex_env_file"
+set +a
+
+codex_bin="${commands[codex]:-}"
+if [[ -z "$codex_bin" && -x "$HOME/.local/bin/codex" ]]; then
+  codex_bin="$HOME/.local/bin/codex"
+fi
+if [[ -z "$codex_bin" ]]; then
+  print -u2 "Could not find the Codex executable in PATH"
+  exit 1
+fi
+
+exec "$codex_bin" "$@"

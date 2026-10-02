@@ -24,5 +24,20 @@ export BROWSER="/mnt/c/PROGRA~1/Google/Chrome/Application/chrome.exe"
 
 # Ensure font settings and keyboard maps for X11
 export DISPLAY=localhost:0
-xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.CSCO 
-xrdb -merge ~/.zprezto/runcoms/byhost/Xresources.CSCO 
+xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.CSCO
+xmodmap ~/.zprezto/runcoms/byhost/Xmodmap.rightalt
+xrdb -merge ~/.zprezto/runcoms/byhost/Xresources.CSCO
+
+# Override so that we use the right socket
+export EDITOR="emacsclient -s /tmp/realdcb/emacs1000/server -nw -c"
+export VISUAL="$EDITOR"
+
+# Linuxbrew setup
+export HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
+export HOMEBREW_CELLAR="/home/linuxbrew/.linuxbrew/Cellar"
+export HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew/Homebrew"
+fpath[1,0]="/home/linuxbrew/.linuxbrew/share/zsh/site-functions"
+export FPATH
+export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin${PATH+:$PATH}"
+[ -z "${MANPATH-}" ] || { export MANPATH="${MANPATH%"${MANPATH##*[!:]}"}"; export MANPATH=":${MANPATH#"${MANPATH%%[!:]*}"}"; }
+export INFOPATH="/home/linuxbrew/.linuxbrew/share/info:${INFOPATH:-}"
