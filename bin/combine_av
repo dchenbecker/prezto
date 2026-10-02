@@ -1,0 +1,49 @@
+#!/bin/zsh
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 -v <video_file> -a <audio_file> -o <output_file> [-r]"
+    echo "  -v : Input video file (e.g., video.mp4)"
+    echo "  -a : Input audio file (e.g., audio.m4a)"
+    echo "  -o : Output filename (e.g., output.mp4)"
+    echo "  -r : Re-encode audio to AAC (default: copy audio stream as-is)"
+    exit 1
+}
+
+AUDIO_CODEC="copy"
+
+# Parse options
+while getopts "v:a:o:r" opt; do
+    case "$opt" in
+        v) VIDEO="$OPTARG" ;;
+        a) AUDIO="$OPTARG" ;;
+        o) OUTPUT="$OPTARG" ;;
+        r) AUDIO_CODEC="aac" ;;
+        *) usage ;;
+    esac
+done
+
+# Validate required arguments
+if [[ -z "$VIDEO" || -z "$AUDIO" || -z "$OUTPUT" ]]; then
+    echo "Error: Video, audio, and output files are required."
+    usage
+fi
+
+for f in "$VIDEO" "$AUDIO"; do
+    if [[ ! -f "$f" ]]; then
+        echo "Error: File not found: $f"
+        exit 1
+    fi
+done
+
+# -shortest ends output at the shorter stream, so a longer audio track doesn't
+# leave a frozen last frame (but a shorter one truncates the video; with
+# stream-copied video the cut lands on a packet boundary, so it is approximate).
+# The explicit -map ignores any audio already in the video file.
+# Audio is copied unless -r is given, since some codecs (e.g. Opus) aren't
+# valid in every container (e.g. mp4) and must be re-encoded to AAC.
+ffmpeg -i "$VIDEO" -i "$AUDIO" \
+    -map 0:v:0 -map 1:a:0 \
+    -c:v copy -c:a "$AUDIO_CODEC" \
+    -shortest \
+    "$OUTPUT"
