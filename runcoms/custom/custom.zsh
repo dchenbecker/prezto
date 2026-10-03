@@ -43,6 +43,16 @@ if [ -d "/nix/var/nix/profiles/default/bin" ]; then
     path+=~/.nix-profile/bin
 fi
 
+# Set up Linuxbrew if available. shellenv exports HOMEBREW_PREFIX/CELLAR/REPOSITORY
+# and updates PATH, MANPATH and INFOPATH.
+for __brew in /home/linuxbrew/.linuxbrew/bin/brew ~/.linuxbrew/bin/brew; do
+    if [ -x "$__brew" ]; then
+        eval "$("$__brew" shellenv)"
+        break
+    fi
+done
+unset __brew
+
 # Add asdf if available
 if hash asdf > /dev/null; then
     export ASDF_DATA_DIR=~/.asdf
