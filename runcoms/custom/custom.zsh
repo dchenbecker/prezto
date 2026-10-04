@@ -8,7 +8,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
   alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
 
-  export path=(
+  path=(
       ~/.nodenv/shims
       /opt/homebrew/bin
       /opt/homebrew/opt/coreutils/libexec/gnubin
@@ -69,11 +69,6 @@ if hash bat &>/dev/null; then
     alias cat="bat --pager=never"
     alias less="bat"
     export BAT_THEME="Solarized (light)"
-fi
-
-## Nicer watch replacement
-if hash viddy &>/dev/null; then
-    alias watch="viddy"
 fi
 
 ## Nicer watch replacement
@@ -212,11 +207,6 @@ fi
 # Set up Nix env if available
 if [ -r ~/.nix-profile/etc/profile.d/nix.sh ]; then
     source ~/.nix-profile/etc/profile.d/nix.sh
-fi
-
-# Set up direnv if available
-if which direnv >& /dev/null ; then
-    eval "$(direnv hook zsh)"
 fi
 
 # Set up direnv if available
