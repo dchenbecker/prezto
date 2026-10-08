@@ -43,6 +43,11 @@ if [ -d "/nix/var/nix/profiles/default/bin" ]; then
     path+=~/.nix-profile/bin
 fi
 
+# Alias to VLC for WSL
+if [ -f "/mnt/c/Program\ Files\ \(x86\)/VideoLAN/VLC/vlc.exe" ]; then
+    alias vlc="/mnt/c/Program\ Files\ \(x86\)/VideoLAN/VLC/vlc.exe"
+fi
+
 # Set up Linuxbrew if available. shellenv exports HOMEBREW_PREFIX/CELLAR/REPOSITORY
 # and updates PATH, MANPATH and INFOPATH.
 for __brew in /home/linuxbrew/.linuxbrew/bin/brew ~/.linuxbrew/bin/brew; do
