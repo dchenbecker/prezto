@@ -8,6 +8,12 @@ alias sbt='nocorrect sbt'
 # Assuming 24 bit terminal under Windows and Linux
 export TERM=xterm-24bit
 
+# Needed for gpg pinentry to prompt in the current terminal
+export GPG_TTY=$(tty)
+
+# Must match server-socket-dir in ~/.emacs.d/init.el
+export EMACS_SOCKET_NAME="/tmp/${USER}/emacs${UID}/server"
+
 # Add Nix if available
 if [ -d "/nix/var/nix/profiles/default/bin" ]; then
     path+=/nix/var/nix/profiles/default/bin

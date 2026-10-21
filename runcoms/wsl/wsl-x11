@@ -1,0 +1,22 @@
+# -*- mode: sh; sh-shell: zsh; -*-
+# Applies keyboard maps and font settings for an X server running on the
+# Windows side (VcXsrv or WSLg). Source this explicitly from a host file.
+#
+# Set WSL_DPI_SCALE (e.g. 1.75 for Windows' 175% scaling) before sourcing
+# to scale fonts on high-DPI displays. This requires that Windows is not
+# bitmap-scaling VcXsrv itself: set vcxsrv.exe's Compatibility > "Change high
+# DPI settings" > "Override high DPI scaling behavior" to "Application".
+
+[[ -n "$DISPLAY" ]] || export DISPLAY=localhost:0
+
+# Checked on every shell (rather than cached) so a restarted X server is
+# always picked up; the timeout keeps shells snappy if the server is absent.
+if (( $+commands[xset] )) && timeout 2 xset q >& /dev/null; then
+    xmodmap ~/.zprezto/runcoms/wsl/Xmodmap
+    xrdb -merge ~/.zprezto/runcoms/wsl/Xresources
+    # Xft.dpi is honored by GTK, Qt, Emacs and xterm alike. Don't also set
+    # GDK_DPI_SCALE, which would scale GTK fonts a second time.
+    if [[ -n "$WSL_DPI_SCALE" ]]; then
+        xrdb -merge <<< "Xft.dpi: $(printf %.0f $(( 96 * WSL_DPI_SCALE )))"
+    fi
+fi

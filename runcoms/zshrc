@@ -41,6 +41,11 @@ fi
 
 export FQDN
 
+# Settings common to all WSL hosts come first so host files can override them
+if [[ -n "$WSL_DISTRO_NAME" && -r ~/.zprezto/runcoms/wsl/wsl ]]; then
+    . ~/.zprezto/runcoms/wsl/wsl
+fi
+
 if [ -r ~/.zprezto/runcoms/byhost/$FQDN ]; then
     . ~/.zprezto/runcoms/byhost/$FQDN
 fi

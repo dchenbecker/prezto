@@ -2,8 +2,6 @@
 
 export MANPATH="/usr/local/man:$MANPATH"
 
-export GPG_TTY=$(tty)
-
 # This is really annoying because it always locks out Debbie
 umask 002
 

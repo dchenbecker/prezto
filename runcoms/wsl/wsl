@@ -1,0 +1,11 @@
+# -*- mode: sh; sh-shell: zsh; -*-
+# Settings common to any WSL host. Sourced automatically from zshrc when
+# running under WSL, before the per-host file so that hosts can override.
+
+# Open files/directories in the Windows default handler
+winopen() {
+    /mnt/c/Windows/explorer.exe $(wslpath -w $1)
+}
+
+# Use the Windows browser for URLs
+export BROWSER=xdg-open

@@ -11,7 +11,7 @@
 
 export EDITOR="emacsclient -nw -c"
 
-if [[ -n DISPLAY ]]; then
+if [[ -n $DISPLAY ]]; then
     export VISUAL=emacsclient
 fi
 
