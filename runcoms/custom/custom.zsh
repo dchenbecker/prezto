@@ -3,39 +3,10 @@ if [ -d ~/go/bin/ ]; then
     path+=(~/go/bin)
 fi
 
-# Derek's OSX aliases
-if [ "$(uname -s)" = "Darwin" ]; then
-  alias emacs='/Applications/Emacs.app/Contents/MacOS/Emacs'
-  alias emacsclient='/Applications/Emacs.app/Contents/MacOS/bin/emacsclient'
+alias sbt='nocorrect sbt'
 
-  path=(
-      ~/.nodenv/shims
-      /opt/homebrew/bin
-      /opt/homebrew/opt/coreutils/libexec/gnubin
-      $path
-      /usr/local/texlive/2024/bin/universal-darwin
-      /Applications/Wireshark.app/Contents/MacOS
-  )
-
-  export manpath=(
-      /opt/homebrew/opt/coreutils/libexec/gnuman
-      /opt/homebrew/share/man
-      /usr/share/man
-  )
-
-  export EMACS_SOCKET_NAME=/tmp/${USER}/emacs${UID}/server
-  export EDITOR="/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-  alias en="${EDITOR} -nw"
-  export VISUAL="$EDITOR"
-
-  alias tar='gtar'
-  alias dircolors='gdircolors'
-else
-  alias sbt='nocorrect sbt'
-
-  # Assuming 24 bit terminal under Windows and Linux
-  export TERM=xterm-24bit
-fi
+# Assuming 24 bit terminal under Windows and Linux
+export TERM=xterm-24bit
 
 # Add Nix if available
 if [ -d "/nix/var/nix/profiles/default/bin" ]; then
