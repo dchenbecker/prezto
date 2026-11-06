@@ -320,7 +320,7 @@ fi
 
 if [[ "$dry_run" == true ]]; then
   for index in "${!candidate_ids[@]}"; do
-    activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M:%S %Z')"
+    activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M')"
     printf 'Would open %s — %s  [last activity: %s]\n' \
       "${candidate_labels[$index]}" "${candidate_working_dirs[$index]}" "$activity_time"
   done
@@ -333,18 +333,85 @@ else
     }
 
     dialog_items=()
+    dialog_labels=()
+    dialog_times=()
+    dialog_dirs=()
+    dialog_order=()
+    max_dialog_label_width=0
+    max_dialog_time_width=0
+    max_dialog_dir_width=0
     for index in "${!candidate_ids[@]}"; do
-      activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M %Z')"
-      working_dir_label="${candidate_working_dirs[$index]##*/}"
+      activity_time="$(date -d "@${candidate_activity[$index]}" '+%Y-%m-%d %H:%M')"
       dialog_label="${candidate_labels[$index]}"
-      if [[ "$dialog_label" == "$working_dir_label" ]]; then
-        dialog_label+=" — last activity: $activity_time"
-      else
-        dialog_label+=" — $working_dir_label — last activity: $activity_time"
+      dialog_dir="${candidate_working_dirs[$index]##*/}"
+      dialog_labels+=("$dialog_label")
+      dialog_times+=("$activity_time")
+      dialog_dirs+=("$dialog_dir")
+      if ((${#dialog_label} > max_dialog_label_width)); then
+        max_dialog_label_width=${#dialog_label}
       fi
+      if ((${#activity_time} > max_dialog_time_width)); then
+        max_dialog_time_width=${#activity_time}
+      fi
+      if ((${#dialog_dir} > max_dialog_dir_width)); then
+        max_dialog_dir_width=${#dialog_dir}
+      fi
+
+      position=${#dialog_order[@]}
+      while ((position > 0 && candidate_activity[dialog_order[position - 1]] < candidate_activity[index])); do
+        position=$((position - 1))
+      done
+      dialog_order=(
+        "${dialog_order[@]:0:position}"
+        "$index"
+        "${dialog_order[@]:position}"
+      )
+    done
+
+    terminal_cols="$(tput cols 2>/dev/null || printf '%s' "${COLUMNS:-80}")"
+    available_column_width=$((terminal_cols - max_dialog_time_width - 22))
+    if ((available_column_width < 2)); then
+      available_column_width=2
+    fi
+
+    dialog_dir_width=$max_dialog_dir_width
+    if ((dialog_dir_width > 48)); then
+      dialog_dir_width=48
+    fi
+    dialog_label_width=$max_dialog_label_width
+    if ((dialog_label_width > 60)); then
+      dialog_label_width=60
+    fi
+    if ((dialog_label_width + dialog_dir_width > available_column_width)); then
+      dialog_label_width=$((available_column_width - dialog_dir_width))
+      if ((dialog_label_width < 1)); then
+        dialog_label_width=1
+        dialog_dir_width=$((available_column_width - dialog_label_width))
+        if ((dialog_dir_width < 1)); then
+          dialog_dir_width=1
+        fi
+      fi
+    fi
+
+    for index in "${dialog_order[@]}"; do
+      dialog_label="${dialog_labels[$index]}"
+      if ((${#dialog_label} > dialog_label_width)); then
+        dialog_label="${dialog_label:0:dialog_label_width-1}…"
+      fi
+      printf -v dialog_label '%-*s' "$dialog_label_width" "$dialog_label"
+
+      activity_time="${dialog_times[$index]}"
+      printf -v activity_time '%-*s' "$max_dialog_time_width" "$activity_time"
+
+      dialog_dir="${dialog_dirs[$index]}"
+      if ((${#dialog_dir} > dialog_dir_width)); then
+        dialog_dir="${dialog_dir:0:dialog_dir_width-1}…"
+      fi
+      printf -v dialog_dir '%-*s' "$dialog_dir_width" "$dialog_dir"
+
       dialog_items+=(
         "${candidate_dialog_keys[$index]}"
-        "$dialog_label"
+        "$dialog_label  $activity_time  $dialog_dir"
         on
       )
     done
