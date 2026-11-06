@@ -7,5 +7,10 @@ winopen() {
     /mnt/c/Windows/explorer.exe $(wslpath -w $1)
 }
 
+# Make Windows PowerShell available to WSL CLI clipboard integrations.
+if [[ -d /mnt/c/Windows/System32/WindowsPowerShell/v1.0 ]]; then
+    path+=(/mnt/c/Windows/System32/WindowsPowerShell/v1.0)
+fi
+
 # Use the Windows browser for URLs
 export BROWSER=xdg-open
