@@ -12,5 +12,13 @@ if [[ -d /mnt/c/Windows/System32/WindowsPowerShell/v1.0 ]]; then
     path+=(/mnt/c/Windows/System32/WindowsPowerShell/v1.0)
 fi
 
+# Make WSL interop tools available so xdg-open can delegate URLs to Windows.
+if [[ -d /mnt/c/Windows ]]; then
+    path+=(/mnt/c/Windows)
+fi
+if [[ -d /mnt/c/Windows/System32 ]]; then
+    path+=(/mnt/c/Windows/System32)
+fi
+
 # Use the Windows browser for URLs
 export BROWSER=xdg-open
