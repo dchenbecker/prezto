@@ -47,7 +47,9 @@ PIP_PACKAGES=()
 
 # cargo install-update has no package list here by design: it discovers
 # every `cargo install`-ed binary itself and updates whichever are stale
-# (`cargo install-update -a`).
+# (`cargo install-update -a`). Builds run with TMPDIR pointed here so they
+# don't fill the default temp filesystem.
+CARGO_TMPDIR=/home/software/build/cargotmp
 
 # ---------------------------------------------------------------------------
 # Plumbing
@@ -206,7 +208,7 @@ if (( LIST_ONLY )); then
   print "npm global packages:           ${NPM_GLOBAL_PACKAGES[*]:-none}"
   print "pip packages:                  ${PIP_PACKAGES[*]:-none}"
   print "rustup:                        toolchain update (rustup update)"
-  print "cargo:                         all installed binaries (cargo install-update -a)"
+  print "cargo:                         all installed binaries (cargo install-update -a, TMPDIR=$CARGO_TMPDIR)"
   exit 0
 fi
 
@@ -642,7 +644,7 @@ update_cargo() {
     return 1
   fi
 
-  local cmd="cargo install-update -a"
+  local cmd="TMPDIR=$CARGO_TMPDIR cargo install-update -a"
   if (( DRY_RUN )); then
     log "[dry-run] $cmd"
     return 0
@@ -651,7 +653,8 @@ update_cargo() {
 
   local tmp rc output
   tmp=$(mktemp)
-  cargo install-update -a 2>&1 | tee "$tmp"
+  mkdir -p "$CARGO_TMPDIR"
+  TMPDIR=$CARGO_TMPDIR cargo install-update -a 2>&1 | tee "$tmp"
   rc=$pipestatus[1]
   output=$(<"$tmp")
   rm -f "$tmp"
@@ -681,7 +684,7 @@ update_cargo() {
     local n
     for n in "${fname_arr[@]}"; do
       FAILURES+=("cargo: $n")
-      FAILURE_CMDS+=("cargo install-update $n")
+      FAILURE_CMDS+=("TMPDIR=$CARGO_TMPDIR cargo install-update $n")
     done
   fi
 
