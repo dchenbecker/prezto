@@ -30,3 +30,6 @@ pdfrotate() {
 
 # Force use of the terminal
 unset VISUAL
+
+# Keep Claude Code's scratch files off the quota-limited /tmp volume
+export CLAUDE_CODE_TMPDIR=/home/software/build/claudetmp
