@@ -28,6 +28,12 @@ pdfrotate() {
     qpdf --rotate=${1} ${2} ${FILENAME} && mv -f ${FILENAME} ${2}
 }
 
+# VNC on display :2 (reach it through an SSH tunnel to localhost:5902).
+# TigerVNC listens on loopback only by default ($localhost in
+# /etc/tigervnc/vncserver-config-defaults), so no -localhost flag.
+alias vncstart='vncserver -geometry 1800x1100 -depth 16 :2'
+alias vncstop='vncserver -kill :2'
+
 # Force use of the terminal
 unset VISUAL
 
