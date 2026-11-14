@@ -1,0 +1,17 @@
+#!/bin/sh
+# Works with both Xvnc4 (vnc4server) and TigerVNC.
+
+# Don't inherit a session bus from whatever launched vncserver;
+# startxfce4 starts a fresh one for this display.
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+
+[ -r "$HOME/.Xresources" ] && xrdb "$HOME/.Xresources"
+
+# Clipboard sync between the VNC client and this desktop.
+vncconfig -iconic &
+
+gnome-terminal &
+
+# exec so the VNC session ends when the desktop session ends.
+exec startxfce4
