@@ -47,9 +47,10 @@ PIP_PACKAGES=()
 
 # cargo install-update has no package list here by design: it discovers
 # every `cargo install`-ed binary itself and updates whichever are stale
-# (`cargo install-update -a`). Builds run with TMPDIR pointed here so they
-# don't fill the default temp filesystem.
-CARGO_TMPDIR=/home/software/build/cargotmp
+# (`cargo install-update -a`). If CARGO_TMPDIR is set in the environment
+# (e.g. from a runcoms/byhost file), builds run with TMPDIR pointed there so
+# they don't fill a small default temp filesystem.
+CARGO_TMPDIR=${CARGO_TMPDIR:-}
 
 # ---------------------------------------------------------------------------
 # Plumbing
@@ -208,7 +209,7 @@ if (( LIST_ONLY )); then
   print "npm global packages:           ${NPM_GLOBAL_PACKAGES[*]:-none}"
   print "pip packages:                  ${PIP_PACKAGES[*]:-none}"
   print "rustup:                        toolchain update (rustup update)"
-  print "cargo:                         all installed binaries (cargo install-update -a, TMPDIR=$CARGO_TMPDIR)"
+  print "cargo:                         all installed binaries (cargo install-update -a${CARGO_TMPDIR:+, TMPDIR=$CARGO_TMPDIR})"
   exit 0
 fi
 
@@ -644,7 +645,8 @@ update_cargo() {
     return 1
   fi
 
-  local cmd="TMPDIR=$CARGO_TMPDIR cargo install-update -a"
+  local env_prefix=${CARGO_TMPDIR:+TMPDIR=$CARGO_TMPDIR }
+  local cmd="${env_prefix}cargo install-update -a"
   if (( DRY_RUN )); then
     log "[dry-run] $cmd"
     return 0
@@ -653,8 +655,12 @@ update_cargo() {
 
   local tmp rc output
   tmp=$(mktemp)
-  mkdir -p "$CARGO_TMPDIR"
-  TMPDIR=$CARGO_TMPDIR cargo install-update -a 2>&1 | tee "$tmp"
+  if [[ -n "$CARGO_TMPDIR" ]]; then
+    mkdir -p "$CARGO_TMPDIR"
+    TMPDIR=$CARGO_TMPDIR cargo install-update -a 2>&1 | tee "$tmp"
+  else
+    cargo install-update -a 2>&1 | tee "$tmp"
+  fi
   rc=$pipestatus[1]
   output=$(<"$tmp")
   rm -f "$tmp"
@@ -684,7 +690,7 @@ update_cargo() {
     local n
     for n in "${fname_arr[@]}"; do
       FAILURES+=("cargo: $n")
-      FAILURE_CMDS+=("TMPDIR=$CARGO_TMPDIR cargo install-update $n")
+      FAILURE_CMDS+=("${env_prefix}cargo install-update $n")
     done
   fi
 
