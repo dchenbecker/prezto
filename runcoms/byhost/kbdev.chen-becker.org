@@ -1,3 +1,6 @@
 # Add snap path for docker and other tools in Ubuntu 24.04
 path+=/snap/bin
 export PATH
+
+export TERM=xterm-24bit
+export EMACS_SOCKET_NAME=/tmp/derek/emacs1000/server
