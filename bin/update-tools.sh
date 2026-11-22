@@ -2,12 +2,14 @@
 #
 # Update the LSP/toolchain dependencies installed for Emacs's eglot/xref
 # setup: asdf-managed runtimes, `go install` binaries, global npm packages,
-# pip packages, rustup toolchains/components, and cargo-installed binaries.
+# pip packages, rustup toolchains/components, cargo-installed binaries, and
+# Homebrew packages, then records a manifest of what is installed.
 # Each category is a plain array below -- add a line to extend it.
 #
-# Usage: update-tools.sh [--asdf [PLUGIN[=VERSION]]] [--node [VERSION]]
+# Usage: update-tools.sh [--asdf [PLUGIN[=VERSION]]] [--skip-asdf PLUGIN]
+#                         [--node [VERSION]]
 #                         [--go] [--npm] [--pip]
-#                         [--rustup] [--cargo]
+#                         [--rustup] [--cargo] [--brew] [--manifest]
 #                         [--dry-run] [--list] [-h]
 #   With no category flags, all configured categories run. Node.js is opt-in
 #   because changing the user-wide version can affect other tools.
@@ -22,9 +24,15 @@ setopt NO_UNSET PIPE_FAIL
 # What to update
 # ---------------------------------------------------------------------------
 
-# asdf plugins to keep pinned to "latest" (plugin update, install latest,
-# set -u, reshim)
-ASDF_LATEST_PLUGINS=(golang coursier)
+# Every installed asdf plugin is kept at "latest" by default (plugin update,
+# install latest, set -u, reshim). List plugins here to opt them out of that
+# default run. nodejs is skipped because changing the user-wide Node version
+# can affect other tools; use --node for it. python and ruby are skipped for
+# the same reason (other tooling, including --pip, depends on the current
+# interpreter). An explicit `--asdf PLUGIN`
+# still updates a skipped plugin, and --skip-asdf PLUGIN adds to this list
+# for a single run.
+ASDF_SKIP_PLUGINS=(nodejs python ruby)
 
 # `go install` targets, run against the asdf-managed go
 GO_INSTALL_PACKAGES=(
@@ -47,10 +55,19 @@ PIP_PACKAGES=()
 
 # cargo install-update has no package list here by design: it discovers
 # every `cargo install`-ed binary itself and updates whichever are stale
-# (`cargo install-update -a`). If CARGO_TMPDIR is set in the environment
-# (e.g. from a runcoms/byhost file), builds run with TMPDIR pointed there so
-# they don't fill a small default temp filesystem.
-CARGO_TMPDIR=${CARGO_TMPDIR:-}
+# (`cargo install-update -a`).
+
+# If UPDATE_TOOLS_TMPDIR is set in the environment (e.g. from a
+# runcoms/byhost file), the whole script runs with TMPDIR pointed there so
+# asdf installs, cargo builds, etc. don't fill a small default temp
+# filesystem.
+UPDATE_TOOLS_TMPDIR=${UPDATE_TOOLS_TMPDIR:-}
+
+# Directory for the manifest of what is installed (asdf plugins/versions,
+# Brewfile, cargo/rustup/npm lists). The installs themselves live outside
+# the backed-up home directory tree and can be rebuilt from these small
+# text files, so back this directory up rather than the installs.
+TOOL_MANIFEST_DIR=${TOOL_MANIFEST_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/tool-manifest}
 
 # ---------------------------------------------------------------------------
 # Plumbing
@@ -68,6 +85,8 @@ RUN_NPM=0
 RUN_PIP=0
 RUN_RUSTUP=0
 RUN_CARGO=0
+RUN_BREW=0
+RUN_MANIFEST=0
 ANY_CATEGORY_FLAG=0
 
 # Parallel arrays: what happened, for the closing summary. A failure's
@@ -121,7 +140,10 @@ usage() {
 Usage: update-tools.sh [options]
 
 Options:
-  --asdf        Update the configured asdf plugins
+  --asdf        Update every installed asdf plugin except those opted out
+                (ASDF_SKIP_PLUGINS in this script, or --skip-asdf)
+  --skip-asdf PLUGIN
+                Exclude PLUGIN from the default asdf update (repeatable)
   --asdf PLUGIN
                 Update that plugin to its latest version and set it as the
                 user-wide default (java defaults to plain Corretto, not musl)
@@ -137,9 +159,17 @@ Options:
   --pip         Update only pip tools
   --rustup      Update only rustup (toolchains + components)
   --cargo       Update only cargo-installed binaries (cargo install-update)
+  --brew        Update only Homebrew/Linuxbrew packages (brew upgrade);
+                skipped if brew isn't installed
+  --manifest    Only write the installed-tools manifest (see
+                TOOL_MANIFEST_DIR); it also runs last in a default run
   -n, --dry-run Print what would run without changing anything
   --list        Print the configured tools and exit
   -h, --help    Show this help
+
+Environment:
+  UPDATE_TOOLS_TMPDIR  Run everything with TMPDIR set to this directory
+  TOOL_MANIFEST_DIR    Where --manifest writes (default ~/.config/tool-manifest)
 
 With no category flag, all configured categories run. Always prints a closing
 summary of what changed, what was already current, and the exact command
@@ -162,6 +192,14 @@ while (( $# )); do
       RUN_ASDF=1; ANY_CATEGORY_FLAG=1
       ASDF_PLUGIN_REQUESTS+=("${1#--asdf=}")
       ;;
+    --skip-asdf)
+      if (( $# < 2 )) || [[ "$2" == -* ]]; then
+        print -u2 "--skip-asdf requires a plugin name"; usage; exit 1
+      fi
+      ASDF_SKIP_PLUGINS+=("$2")
+      shift
+      ;;
+    --skip-asdf=*) ASDF_SKIP_PLUGINS+=("${1#--skip-asdf=}") ;;
     --node)
       RUN_NODE=1; ANY_CATEGORY_FLAG=1
       if (( $# > 1 )) && [[ "$2" != -* ]]; then
@@ -175,6 +213,8 @@ while (( $# )); do
     --pip) RUN_PIP=1; ANY_CATEGORY_FLAG=1 ;;
     --rustup) RUN_RUSTUP=1; ANY_CATEGORY_FLAG=1 ;;
     --cargo) RUN_CARGO=1; ANY_CATEGORY_FLAG=1 ;;
+    --brew) RUN_BREW=1; ANY_CATEGORY_FLAG=1 ;;
+    --manifest) RUN_MANIFEST=1; ANY_CATEGORY_FLAG=1 ;;
     -n|--dry-run) DRY_RUN=1 ;;
     --list) LIST_ONLY=1 ;;
     -h|--help) usage; exit 0 ;;
@@ -198,18 +238,21 @@ for asdf_request in "${ASDF_PLUGIN_REQUESTS[@]}"; do
 done
 
 if (( ! ANY_CATEGORY_FLAG )); then
-  RUN_ASDF=1; RUN_ASDF_DEFAULT=1; RUN_GO=1; RUN_NPM=1; RUN_PIP=1; RUN_RUSTUP=1; RUN_CARGO=1
+  RUN_ASDF=1; RUN_ASDF_DEFAULT=1; RUN_GO=1; RUN_NPM=1; RUN_PIP=1; RUN_RUSTUP=1; RUN_CARGO=1; RUN_BREW=1; RUN_MANIFEST=1
 fi
 
 if (( LIST_ONLY )); then
-  print "asdf plugins (kept at latest): ${ASDF_LATEST_PLUGINS[*]:-none}"
+  print "asdf plugins (kept at latest): all installed, except: ${ASDF_SKIP_PLUGINS[*]:-none}"
   print "asdf custom plugin update:      --asdf PLUGIN[=VERSION]"
   print "asdf Node.js:                 opt-in via --node [VERSION] (latest by default)"
   print "go install packages:           ${GO_INSTALL_PACKAGES[*]:-none}"
   print "npm global packages:           ${NPM_GLOBAL_PACKAGES[*]:-none}"
   print "pip packages:                  ${PIP_PACKAGES[*]:-none}"
   print "rustup:                        toolchain update (rustup update)"
-  print "cargo:                         all installed binaries (cargo install-update -a${CARGO_TMPDIR:+, TMPDIR=$CARGO_TMPDIR})"
+  print "cargo:                         all installed binaries (cargo install-update -a)"
+  print "brew:                          brew upgrade (if brew is installed)"
+  print "manifest directory:            $TOOL_MANIFEST_DIR"
+  print "temp directory:                ${UPDATE_TOOLS_TMPDIR:-default (\$TMPDIR or /tmp)}"
   exit 0
 fi
 
@@ -225,6 +268,17 @@ require_cmd() {
 # asdf
 # ---------------------------------------------------------------------------
 
+# Fallback for plugins whose `asdf latest PLUGIN` comes back empty. asdf 0.20
+# ends `asdf list all` output with a blank line, which plugins' latest-stable
+# scripts (e.g. gradle's `tail -1`) pick as the "latest" version. Take the
+# last non-blank, non-prerelease entry ourselves instead.
+asdf_latest_fallback() {
+  asdf list all "$1" 2>/dev/null \
+    | sed 's/^[[:space:]]*//' \
+    | grep -ivE '^$|-src|-dev|-latest|-stm|[-.]rc|-milestone|-alpha|-beta|[-.]pre|-next|snapshot|master' \
+    | tail -n1
+}
+
 update_asdf() {
   require_cmd asdf || {
     FAILURES+=("asdf: command not found")
@@ -233,9 +287,21 @@ update_asdf() {
   }
 
   local plugin request selector latest current latest_cmd java_versions java_major
-  local -a requests
+  local -a requests installed_plugins
+  local explicit explicit_match
   if (( RUN_ASDF_DEFAULT )); then
-    requests=("${ASDF_LATEST_PLUGINS[@]}")
+    installed_plugins=("${(@f)$(asdf plugin list 2>/dev/null)}")
+    for plugin in "${installed_plugins[@]}"; do
+      [[ -n "$plugin" ]] || continue
+      (( ${ASDF_SKIP_PLUGINS[(Ie)$plugin]} )) && continue
+      # An explicit request for the same plugin (possibly with a version
+      # selector) takes precedence over the default "latest" update.
+      explicit_match=0
+      for explicit in "${ASDF_PLUGIN_REQUESTS[@]}"; do
+        [[ "${explicit%%=*}" == "$plugin" ]] && explicit_match=1
+      done
+      (( explicit_match )) || requests+=("$plugin")
+    done
   fi
   requests+=("${ASDF_PLUGIN_REQUESTS[@]}")
   (( ${#requests[@]} )) || { skip "no asdf plugins configured"; return 0 }
@@ -291,6 +357,7 @@ update_asdf() {
       latest=$(asdf latest "$plugin" "$selector" 2>/dev/null) || latest=""
     else
       latest=$(asdf latest "$plugin" 2>/dev/null) || latest=""
+      [[ -n "$latest" ]] || latest=$(asdf_latest_fallback "$plugin")
     fi
     [[ -n "$latest" ]] || {
       fail "$latest_cmd failed"
@@ -645,7 +712,7 @@ update_cargo() {
     return 1
   fi
 
-  local env_prefix=${CARGO_TMPDIR:+TMPDIR=$CARGO_TMPDIR }
+  local env_prefix=${UPDATE_TOOLS_TMPDIR:+TMPDIR=$UPDATE_TOOLS_TMPDIR }
   local cmd="${env_prefix}cargo install-update -a"
   if (( DRY_RUN )); then
     log "[dry-run] $cmd"
@@ -655,12 +722,7 @@ update_cargo() {
 
   local tmp rc output
   tmp=$(mktemp)
-  if [[ -n "$CARGO_TMPDIR" ]]; then
-    mkdir -p "$CARGO_TMPDIR"
-    TMPDIR=$CARGO_TMPDIR cargo install-update -a 2>&1 | tee "$tmp"
-  else
-    cargo install-update -a 2>&1 | tee "$tmp"
-  fi
+  cargo install-update -a 2>&1 | tee "$tmp"
   rc=$pipestatus[1]
   output=$(<"$tmp")
   rm -f "$tmp"
@@ -715,8 +777,134 @@ update_cargo() {
 }
 
 # ---------------------------------------------------------------------------
+# Homebrew / Linuxbrew
+# ---------------------------------------------------------------------------
+
+update_brew() {
+  command -v brew >/dev/null 2>&1 || { skip "brew not installed"; return 0 }
+
+  local cmd="brew upgrade"
+  if (( DRY_RUN )); then
+    log "[dry-run] $cmd"
+    return 0
+  fi
+  log "$cmd"
+
+  # `brew upgrade` has no machine-readable summary, so diff the installed
+  # versions before and after to report what actually changed.
+  local before after rc line name new changed=0
+  local -A old_versions
+  before=$(brew list --versions 2>/dev/null)
+  brew upgrade
+  rc=$?
+  after=$(brew list --versions 2>/dev/null)
+
+  for line in "${(@f)before}"; do
+    [[ -n "$line" ]] && old_versions[${line%% *}]=${line#* }
+  done
+  for line in "${(@f)after}"; do
+    [[ -n "$line" ]] || continue
+    name=${line%% *}
+    new=${line#* }
+    if [[ -z "${old_versions[$name]-}" ]]; then
+      CHANGED+=("brew $name: installed $new"); changed=1
+    elif [[ "${old_versions[$name]}" != "$new" ]]; then
+      CHANGED+=("brew $name: ${old_versions[$name]} -> $new"); changed=1
+    fi
+  done
+
+  if (( rc == 0 )); then
+    (( changed )) || UNCHANGED+=("brew: all packages already up to date")
+    ok "$cmd"
+  else
+    fail "$cmd failed"
+    FAILURES+=("brew: upgrade")
+    FAILURE_CMDS+=("$cmd")
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Manifest of installed tools
+# ---------------------------------------------------------------------------
+
+# write_manifest NAME CMD...: run CMD and store its stdout as
+# $TOOL_MANIFEST_DIR/NAME. Written via a temp file so a failing command never
+# clobbers the previous good manifest.
+write_manifest() {
+  local name=$1; shift
+  local out="$TOOL_MANIFEST_DIR/$name" tmp
+  tmp=$(mktemp "$out.XXXXXX") || {
+    fail "cannot write $out"
+    FAILURES+=("manifest: $name")
+    FAILURE_CMDS+=("mkdir -p $TOOL_MANIFEST_DIR")
+    return 1
+  }
+  if "$@" >"$tmp" 2>/dev/null; then
+    chmod 644 "$tmp"
+    if [[ -f "$out" ]] && cmp -s "$tmp" "$out"; then
+      rm -f "$tmp"
+      UNCHANGED+=("manifest $name: unchanged")
+    else
+      mv -f "$tmp" "$out"
+      CHANGED+=("manifest $name: written")
+    fi
+  else
+    rm -f "$tmp"
+    fail "${(j: :)@} failed"
+    FAILURES+=("manifest: $name")
+    FAILURE_CMDS+=("${(j: :)@}")
+  fi
+}
+
+update_manifest() {
+  if (( DRY_RUN )); then
+    log "[dry-run] write manifest files to $TOOL_MANIFEST_DIR"
+    return 0
+  fi
+  mkdir -p "$TOOL_MANIFEST_DIR" || {
+    fail "cannot create $TOOL_MANIFEST_DIR"
+    FAILURES+=("manifest: create directory")
+    FAILURE_CMDS+=("mkdir -p $TOOL_MANIFEST_DIR")
+    return 1
+  }
+  log "manifest -> $TOOL_MANIFEST_DIR"
+
+  # asdf's .tool-versions records versions but not which plugin repos they
+  # came from, so the plugin URLs are needed to rebuild.
+  if command -v asdf >/dev/null 2>&1; then
+    write_manifest asdf-plugins.txt asdf plugin list --urls
+    write_manifest asdf-installed.txt asdf list
+  fi
+  # Only formulae/casks/taps: the go/cargo/npm sections `brew bundle dump`
+  # can add are covered by their own manifests below.
+  if command -v brew >/dev/null 2>&1; then
+    write_manifest Brewfile brew bundle dump --formula --cask --tap --file=-
+  fi
+  if command -v cargo >/dev/null 2>&1; then
+    write_manifest cargo-installed.txt cargo install --list
+  fi
+  if command -v rustup >/dev/null 2>&1; then
+    write_manifest rustup-toolchains.txt rustup toolchain list
+    write_manifest rustup-components.txt rustup component list --installed
+    write_manifest rustup-targets.txt rustup target list --installed
+  fi
+  if command -v npm >/dev/null 2>&1; then
+    write_manifest npm-global.txt npm ls -g --depth=0
+  fi
+  ok "manifest"
+}
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
+
+if [[ -n "$UPDATE_TOOLS_TMPDIR" ]]; then
+  (( DRY_RUN )) || mkdir -p "$UPDATE_TOOLS_TMPDIR" || {
+    print -u2 "cannot create UPDATE_TOOLS_TMPDIR: $UPDATE_TOOLS_TMPDIR"
+    exit 1
+  }
+  export TMPDIR=$UPDATE_TOOLS_TMPDIR
+fi
 
 (( RUN_ASDF ))   && { log "asdf"; update_asdf }
 (( RUN_NODE ))   && { log "asdf Node.js"; update_node }
@@ -725,6 +913,9 @@ update_cargo() {
 (( RUN_PIP ))    && { log "pip"; update_pip }
 (( RUN_RUSTUP )) && { log "rustup"; update_rustup }
 (( RUN_CARGO ))  && { log "cargo install-update"; update_cargo }
+(( RUN_BREW ))   && { log "brew"; update_brew }
+# Last, so the manifest reflects the post-update state.
+(( RUN_MANIFEST )) && update_manifest
 
 # ---------------------------------------------------------------------------
 # Summary -- always printed, success or failure
@@ -757,6 +948,7 @@ fi
 
 if (( ${#FAILURES[@]} )); then
   print -P "%F{red}Failed (rerun the command below to triage):%f"
+  [[ -n "$UPDATE_TOOLS_TMPDIR" ]] && print "  (run them with TMPDIR=$UPDATE_TOOLS_TMPDIR to keep temp files off /tmp)"
   local i
   for (( i = 1; i <= ${#FAILURES[@]}; i++ )); do
     print "  - ${FAILURES[$i]}"
