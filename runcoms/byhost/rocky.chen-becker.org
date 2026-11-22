@@ -41,4 +41,4 @@ unset VISUAL
 export CLAUDE_CODE_TMPDIR=/home/software/build/claudetmp
 
 # Run bin/update-tools.sh (asdf installs, cargo builds) off the tmpfs /tmp
-export UPDATE_TOOLS_TMPDIR=/home/software/build/cargotmp
+export UPDATE_TOOLS_TMPDIR=/home/software/build/tooltmp
