@@ -30,6 +30,8 @@ Environment:
   CODEX_RESUME_WSL_COMMAND     WSL command passed to Windows Terminal. Defaults to wsl.exe.
   CODEX_RESUME_CODEX           Codex launcher used in restored tabs. Defaults to
                                ~/.zprezto/bin/codex-with-env.
+  CODEX_RESUME_WRAPPER         Command that keeps a shell open after Codex exits.
+                               Defaults to ~/.zprezto/bin/codex-resume-session.
   CODEX_RESUME_EXCLUDE_SESSION Session ID to omit. Defaults to CODEX_THREAD_ID or
                                CODEX_SESSION_ID when set.
   CODEX_RESUME_DIALOG          Dialog executable override. Defaults to dialog.
@@ -79,6 +81,7 @@ wt_bin="${CODEX_RESUME_WT:-}"
 wsl_bin="${CODEX_RESUME_WSL:-}"
 wsl_command="${CODEX_RESUME_WSL_COMMAND:-wsl.exe}"
 codex_command="${CODEX_RESUME_CODEX:-$HOME/.zprezto/bin/codex-with-env}"
+resume_wrapper="${CODEX_RESUME_WRAPPER:-$HOME/.zprezto/bin/codex-resume-session}"
 exclude_session="${CODEX_RESUME_EXCLUDE_SESSION:-${CODEX_THREAD_ID:-${CODEX_SESSION_ID:-}}}"
 dialog_command="${CODEX_RESUME_DIALOG:-dialog}"
 dry_run=false
@@ -245,7 +248,7 @@ restore_session() {
   "$wt_bin" "${wt_options[@]}" \
     "$wsl_command" -d "$distro" \
       --cd "$working_dir" \
-      -- "$codex_command" resume "$session_id" </dev/null
+      -- "$resume_wrapper" "$codex_command" "$session_id" </dev/null
 
   ((restored += 1))
 }

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -u
+
+if (($# != 2)); then
+  echo "Usage: codex-resume-session CODEX_LAUNCHER SESSION_ID" >&2
+  exit 2
+fi
+
+codex_launcher="$1"
+session_id="$2"
+
+"$codex_launcher" resume "$session_id"
+codex_status=$?
+
+printf '\nCodex exited with status %d.\n' "$codex_status"
+printf 'Resume this session with: codex resume %q\n\n' "$session_id"
+
+shell="${SHELL:-/bin/zsh}"
+exec "$shell" -l
