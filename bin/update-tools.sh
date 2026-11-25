@@ -26,7 +26,8 @@ setopt NO_UNSET PIPE_FAIL
 
 # Every installed asdf plugin is kept at "latest" by default (plugin update,
 # install latest, set -u, reshim). List plugins here to opt them out of that
-# default run. nodejs is skipped because changing the user-wide Node version
+# default run; install, set -u and reshim are skipped for a plugin that is
+# already current. nodejs is skipped because changing the user-wide Node version
 # can affect other tools; use --node for it. python and ruby are skipped for
 # the same reason (other tooling, including --pip, depends on the current
 # interpreter). An explicit `--asdf PLUGIN`
@@ -152,8 +153,9 @@ Options:
                 set it as the user-wide default (for example java=openjdk-25)
   --node [VERSION]
                 Install Node.js via asdf (latest by default), select it as
-                the user-wide version, and copy global npm packages from
-                installed Node.js versions
+                the user-wide version, and copy global npm packages it
+                lacks (or has at another version) from installed Node.js
+                versions; an already-current Node.js is not reselected
   --go          Update only `go install` tools
   --npm         Update only global npm tools
   --pip         Update only pip tools
@@ -279,6 +281,18 @@ asdf_latest_fallback() {
     | tail -n1
 }
 
+# Print the user-wide version of PLUGIN, i.e. what `asdf set -u` last wrote.
+# A project's .tool-versions or an ASDF_<PLUGIN>_VERSION override must not
+# stand in for it, or the default could be left stale.
+asdf_user_version() {
+  local plugin=$1
+  (
+    cd -q "$HOME" || return 1
+    unset "ASDF_${${(U)plugin}//-/_}_VERSION"
+    asdf current "$plugin" 2>/dev/null | awk -v p="$plugin" '$1 == p { print $2; exit }'
+  )
+}
+
 update_asdf() {
   require_cmd asdf || {
     FAILURES+=("asdf: command not found")
@@ -365,7 +379,15 @@ update_asdf() {
       FAILURE_CMDS+=("$latest_cmd")
       continue
     }
-    current=$(asdf current "$plugin" 2>/dev/null | awk -v p="$plugin" '$1 == p { print $2; exit }')
+    current=$(asdf_user_version "$plugin")
+
+    # A selected version can still be missing on disk (e.g. a restored
+    # .tool-versions), so both must hold before there's nothing to do.
+    if [[ "$current" == "$latest" ]] && asdf where "$plugin" "$latest" >/dev/null 2>&1; then
+      ok "$plugin already $latest"
+      UNCHANGED+=("asdf $plugin: already $latest")
+      continue
+    fi
 
     log "$plugin: ${current:-(none selected)} -> $latest (user-wide default)"
     if ! asdf install "$plugin" "$latest"; then
@@ -399,9 +421,9 @@ update_node() {
 
   local target_version current_version listed_versions source_version install_dir
   local package_json package_lines package_line package_name package_version package_spec target_dir target_npm
-  local cmd
-  local -a source_versions ordered_versions
-  local -A package_versions
+  local cmd select_needed=1
+  local -a source_versions ordered_versions packages_to_copy
+  local -A package_versions target_packages
 
   target_version=$NODE_VERSION
   if [[ "$target_version" == latest ]]; then
@@ -413,12 +435,12 @@ update_node() {
     }
   fi
 
-  current_version=$(asdf current nodejs 2>/dev/null | awk '$1 == "nodejs" { print $2; exit }')
+  current_version=$(asdf_user_version nodejs)
   listed_versions=$(asdf list nodejs 2>/dev/null || true)
   source_versions=()
   local version_line
   for version_line in "${(@f)listed_versions}"; do
-    version_line=$(print -r -- "$version_line" | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^[0-9]/) { print $i; exit } }')
+    version_line=$(print -r -- "$version_line" | awk '{ for (i = 1; i <= NF; i++) { v = $i; sub(/^[*]/, "", v); if (v ~ /^[0-9]/) { print v; exit } } }')
     [[ "$version_line" == [0-9]* ]] && source_versions+=("$version_line")
   done
 
@@ -432,7 +454,10 @@ update_node() {
     [[ "$source_version" == "$current_version" ]] || ordered_versions+=("$source_version")
   done
 
+  # The first version seen supplies each package, current version first, so
+  # its choice wins even over a newer one already in the target.
   package_versions=()
+  target_packages=()
   for source_version in "${ordered_versions[@]}"; do
     install_dir=$(asdf where nodejs "$source_version" 2>/dev/null) || {
       fail "could not locate Node.js $source_version"
@@ -468,32 +493,58 @@ update_node() {
       [[ -n "$package_line" ]] || continue
       package_name=${package_line%%$'\t'*}
       package_version=${package_line#*$'\t'}
+      [[ "$source_version" == "$target_version" ]] && target_packages[$package_name]=$package_version
       [[ -n "${package_versions[$package_name]-}" ]] && continue
       package_versions[$package_name]=$package_version
     done
   done
 
+  # Reinstalling what the target already has would be reported as a change.
+  packages_to_copy=()
+  for package_name in "${(@k)package_versions}"; do
+    [[ "${target_packages[$package_name]-}" == "${package_versions[$package_name]}" ]] \
+      || packages_to_copy+=("$package_name")
+  done
+
+  if [[ "$current_version" == "$target_version" ]] \
+    && asdf where nodejs "$target_version" >/dev/null 2>&1; then
+    select_needed=0
+  fi
+
   cmd="asdf install nodejs $target_version && asdf set -u nodejs $target_version"
   if (( DRY_RUN )); then
-    log "[dry-run] $cmd"
-    log "[dry-run] copy ${#package_versions} global npm package(s) from installed Node.js versions"
+    if (( select_needed )); then
+      log "[dry-run] $cmd"
+    else
+      log "[dry-run] nodejs already $target_version"
+    fi
+    log "[dry-run] copy ${#packages_to_copy} global npm package(s) from installed Node.js versions"
     return 0
   fi
 
-  log "nodejs: ${current_version:-(none selected)} -> $target_version"
-  if ! asdf install nodejs "$target_version"; then
-    fail "asdf install nodejs $target_version failed"
-    FAILURES+=("nodejs: install $target_version")
-    FAILURE_CMDS+=("asdf install nodejs $target_version")
-    return 1
+  if (( select_needed )); then
+    log "nodejs: ${current_version:-(none selected)} -> $target_version"
+    if ! asdf install nodejs "$target_version"; then
+      fail "asdf install nodejs $target_version failed"
+      FAILURES+=("nodejs: install $target_version")
+      FAILURE_CMDS+=("asdf install nodejs $target_version")
+      return 1
+    fi
+    if ! asdf set -u nodejs "$target_version"; then
+      fail "asdf set -u nodejs $target_version failed"
+      FAILURES+=("nodejs: select $target_version")
+      FAILURE_CMDS+=("asdf set -u nodejs $target_version")
+      return 1
+    fi
+    if [[ "$current_version" == "$target_version" ]]; then
+      CHANGED+=("asdf nodejs: reinstalled $target_version")
+    else
+      CHANGED+=("asdf nodejs: ${current_version:-(none)} -> $target_version")
+    fi
+  else
+    ok "nodejs already $target_version"
+    UNCHANGED+=("asdf nodejs: already $target_version")
   fi
-  if ! asdf set -u nodejs "$target_version"; then
-    fail "asdf set -u nodejs $target_version failed"
-    FAILURES+=("nodejs: select $target_version")
-    FAILURE_CMDS+=("asdf set -u nodejs $target_version")
-    return 1
-  fi
-  CHANGED+=("asdf nodejs: ${current_version:-(none)} -> $target_version")
 
   target_dir=$(asdf where nodejs "$target_version" 2>/dev/null) || {
     fail "could not locate installed Node.js $target_version"
@@ -509,7 +560,7 @@ update_node() {
     return 1
   fi
 
-  for package_name in "${(@k)package_versions}"; do
+  for package_name in "${packages_to_copy[@]}"; do
     package_spec="$package_name@${package_versions[$package_name]}"
     if "$target_npm" install --global "$package_spec" >/dev/null; then
       ok "copied $package_spec to Node.js $target_version"
