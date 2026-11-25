@@ -5,6 +5,10 @@
 #   Sorin Ionescu <sorin.ionescu@gmail.com>
 #
 
+# Make the custom completions visible before Prezto's completion module runs
+# compinit; it caches the dump, so calling compinit again later is redundant.
+fpath+="$HOME/.zprezto/completion"
+
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
@@ -51,10 +55,6 @@ fi
 if [ -r ~/.zprezto/runcoms/byhost/$FQDN ]; then
     . ~/.zprezto/runcoms/byhost/$FQDN
 fi
-
-# Set up the completion directory
-fpath+="$HOME/.zprezto/completion"
-compinit
 
 # If starship is available, initialize
 if which starship >& /dev/null; then

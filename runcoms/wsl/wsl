@@ -20,5 +20,11 @@ if [[ -d /mnt/c/Windows/System32 ]]; then
     path+=(/mnt/c/Windows/System32)
 fi
 
+# Prezto's completion module sets PATH_DIRS, which makes command-name
+# completion stat every entry in every PATH directory to offer directories.
+# On /mnt/c/Windows/System32 (9p, ~5000 files) that cost ~2s per <TAB>.
+# Must stay after Prezto loads, since the completion module sets the option.
+unsetopt PATH_DIRS
+
 # Use the Windows browser for URLs
 export BROWSER=xdg-open
