@@ -1,0 +1,288 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: claude-resume-recent [OPTIONS]
+
+Reopen recent Claude Code sessions, each in its own terminal tab or tmux
+window. The multiplexer is auto-detected:
+
+  tmux  when running inside tmux ($TMUX is set): one new tmux window each
+  wt    when running under WSL with Windows Terminal available: one new
+        Windows Terminal tab each
+
+Sessions are discovered from ~/.claude/projects/*/<session-id>.jsonl.
+Requires jq, plus dialog unless --dry-run is given.
+
+Options:
+  --mode MODE        auto (default), tmux, or wt.
+  --max-age-hours N  Restore sessions active within the last N hours.
+  --dry-run          Print what would be opened without opening anything.
+  -h, --help         Show this help.
+
+Environment:
+  CLAUDE_CONFIG_DIR             Claude config dir. Defaults to ~/.claude.
+  CLAUDE_RESUME_MODE            Default for --mode.
+  CLAUDE_RESUME_MAX_AGE_HOURS   Default age cutoff. Defaults to 72.
+  CLAUDE_RESUME_CLAUDE          Claude launcher used in restored tabs. Defaults to the
+                                claude on PATH, else ~/.local/bin/claude.
+  CLAUDE_RESUME_WRAPPER         Command that keeps a shell open after Claude exits.
+                                Defaults to ~/.zprezto/bin/claude-resume-session.
+  CLAUDE_RESUME_EXCLUDE_SESSION Session ID to omit. Defaults to CLAUDE_CODE_SESSION_ID.
+  CLAUDE_RESUME_DIALOG          Dialog executable override. Defaults to dialog.
+  CLAUDE_RESUME_TMUX            tmux executable. Defaults to tmux.
+  CLAUDE_RESUME_TERMINAL_WINDOW (wt) Windows Terminal window target. Defaults to 0.
+  CLAUDE_RESUME_TERMINAL_PROFILE (wt) Profile name or ID. Defaults to WT_PROFILE_ID.
+  CLAUDE_RESUME_DISTRO          (wt) WSL distro. Defaults to WSL_DISTRO_NAME.
+  CLAUDE_RESUME_WT              (wt) Windows Terminal executable override.
+  CLAUDE_RESUME_WSL_COMMAND     (wt) WSL command passed to wt. Defaults to wsl.exe.
+USAGE
+}
+
+# WSL may not have Windows paths on PATH, so fall back to the mounted profiles.
+resolve_wt() {
+  local candidate
+  if command -v wt.exe >/dev/null 2>&1; then
+    command -v wt.exe
+    return
+  fi
+  for candidate in /mnt/c/Users/*/AppData/Local/Microsoft/WindowsApps/wt.exe; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+  return 1
+}
+
+is_wsl() {
+  [[ -n "${WSL_DISTRO_NAME:-}" ]] || grep -qi microsoft /proc/version 2>/dev/null
+}
+
+claude_home="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+mode="${CLAUDE_RESUME_MODE:-auto}"
+max_age_hours="${CLAUDE_RESUME_MAX_AGE_HOURS:-72}"
+# New tabs may start with a minimal PATH (notably via wsl.exe), so hand them
+# an absolute path.
+claude_command="${CLAUDE_RESUME_CLAUDE:-$(command -v claude || printf '%s' "$HOME/.local/bin/claude")}"
+resume_wrapper="${CLAUDE_RESUME_WRAPPER:-$HOME/.zprezto/bin/claude-resume-session}"
+exclude_session="${CLAUDE_RESUME_EXCLUDE_SESSION:-${CLAUDE_CODE_SESSION_ID:-}}"
+dialog_command="${CLAUDE_RESUME_DIALOG:-dialog}"
+tmux_bin="${CLAUDE_RESUME_TMUX:-tmux}"
+terminal_window="${CLAUDE_RESUME_TERMINAL_WINDOW:-0}"
+terminal_profile="${CLAUDE_RESUME_TERMINAL_PROFILE:-${WT_PROFILE_ID:-}}"
+distro="${CLAUDE_RESUME_DISTRO:-${WSL_DISTRO_NAME:-}}"
+wsl_command="${CLAUDE_RESUME_WSL_COMMAND:-wsl.exe}"
+wt_bin="${CLAUDE_RESUME_WT:-}"
+dry_run=false
+
+while (($# > 0)); do
+  case "$1" in
+    --mode)
+      (($# >= 2)) || { echo "--mode requires a value" >&2; exit 2; }
+      mode="$2"
+      shift 2
+      ;;
+    --max-age-hours)
+      (($# >= 2)) || { echo "--max-age-hours requires a value" >&2; exit 2; }
+      max_age_hours="$2"
+      shift 2
+      ;;
+    --dry-run) dry_run=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+[[ "$max_age_hours" =~ ^[0-9]+$ ]] || {
+  echo "max age must be a non-negative integer number of hours: $max_age_hours" >&2
+  exit 2
+}
+# Force base 10 so a leading zero is not read as octal.
+max_age_hours=$((10#$max_age_hours))
+
+# tmux wins over WSL: inside tmux the current terminal is the tmux server,
+# even when that tmux itself runs under WSL.
+if [[ "$mode" == auto ]]; then
+  if [[ -n "${TMUX:-}" ]]; then
+    mode=tmux
+  elif is_wsl && { [[ -n "$wt_bin" ]] || resolve_wt >/dev/null; }; then
+    mode=wt
+  elif [[ "$dry_run" == true ]]; then
+    mode=none
+  else
+    echo "Could not detect tmux or WSL with Windows Terminal." >&2
+    echo "Run inside tmux, or pass --mode tmux|wt." >&2
+    exit 1
+  fi
+fi
+
+case "$mode" in
+  tmux)
+    command -v "$tmux_bin" >/dev/null 2>&1 || { echo "tmux not found: $tmux_bin" >&2; exit 1; }
+    if [[ "$dry_run" != true && -z "${TMUX:-}" ]]; then
+      echo "--mode tmux requires running inside a tmux session." >&2
+      exit 1
+    fi
+    ;;
+  wt)
+    if [[ "$dry_run" != true ]]; then
+      wt_bin="${wt_bin:-$(resolve_wt || true)}"
+      [[ -n "$wt_bin" ]] || { echo "Windows Terminal (wt.exe) not found; set CLAUDE_RESUME_WT." >&2; exit 1; }
+      if [[ -z "$distro" ]]; then
+        echo "Unable to determine the WSL distro. Set CLAUDE_RESUME_DISTRO." >&2
+        exit 1
+      fi
+    fi
+    ;;
+  none) ;;
+  *) echo "Unknown mode: $mode (expected auto, tmux, or wt)" >&2; exit 2 ;;
+esac
+
+projects_dir="$claude_home/projects"
+[[ -d "$projects_dir" ]] || { echo "No Claude projects directory: $projects_dir" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "jq is required to read session transcripts." >&2; exit 1; }
+
+cutoff=$(( $(date +%s) - max_age_hours * 3600 ))
+skipped=0
+restored=0
+ids=() dirs=() labels=() activity=()
+
+# Print the first recorded working directory of a transcript, which is the
+# directory the session was launched from (and where `--resume` must run).
+session_cwd() {
+  grep -a -m1 -E '"cwd":"' "$1" | jq -r '.cwd // empty'
+}
+
+# Print the newest user-assigned title, else the newest generated one.
+session_title() {
+  local file="$1" title
+  title="$(grep -a -E '"type":"custom-title"' "$file" | tail -n 1 |
+    jq -r '.customTitle // .title // empty' 2>/dev/null || true)"
+  if [[ -z "$title" ]]; then
+    title="$(grep -a -E '"type":"ai-title"' "$file" | tail -n 1 |
+      jq -r '.aiTitle // empty' 2>/dev/null || true)"
+  fi
+  printf '%s\n' "$title"
+}
+
+printf 'Scanning Claude sessions in %s...\n' "$projects_dir"
+while IFS= read -r -d '' transcript; do
+  session_id="$(basename "$transcript" .jsonl)"
+  [[ "$session_id" != "$exclude_session" ]] || continue
+
+  last_activity="$(stat -c '%Y' "$transcript")"
+  ((last_activity >= cutoff)) || continue
+
+  working_dir="$(session_cwd "$transcript" || true)"
+  if [[ -z "$working_dir" ]]; then
+    continue  # no conversation recorded; nothing worth resuming
+  fi
+  if [[ ! -d "$working_dir" ]]; then
+    echo "Skipping $session_id: working directory does not exist: $working_dir" >&2
+    ((skipped += 1))
+    continue
+  fi
+
+  title="$(session_title "$transcript" | head -n 1 || true)"
+  ids+=("$session_id")
+  dirs+=("$working_dir")
+  labels+=("${title:-${working_dir##*/}}")
+  activity+=("$last_activity")
+done < <(find "$projects_dir" -mindepth 2 -maxdepth 2 -type f -name '*.jsonl' -print0)
+
+# Indexes ordered most recent first.
+mapfile -t order < <(
+  for i in "${!ids[@]}"; do printf '%s %s\n' "${activity[$i]}" "$i"; done |
+    sort -rn | cut -d' ' -f2
+)
+
+# New windows do not reliably inherit this shell's environment, so forward a
+# custom config dir; otherwise --resume would look in the default one.
+launch=("$resume_wrapper" "$claude_command")
+[[ -z "${CLAUDE_CONFIG_DIR:-}" ]] ||
+  launch=(env "CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR" "${launch[@]}")
+
+restore_session() {
+  local index="$1"
+  local id="${ids[$index]}" dir="${dirs[$index]}" label="${labels[$index]}"
+  local name
+  local -a wt_options
+
+  case "$mode" in
+    tmux)
+      # tmux format-expands -n and -c (including #(command)), and treats a
+      # trailing ';' as a command separator.
+      name="${label:0:30}"
+      while [[ "$name" == *';' ]]; do name="${name%;}"; done
+      # -d keeps focus on the current window while the rest open.
+      "$tmux_bin" new-window -d -c "${dir//\#/##}" -n "${name//\#/##}" -- \
+        "${launch[@]}" "$id"
+      ;;
+    wt)
+      # Windows Terminal splits commands on ';' even inside an argument.
+      wt_options=(-w "$terminal_window" new-tab)
+      [[ -z "$terminal_profile" ]] || wt_options+=(--profile "$terminal_profile")
+      wt_options+=(--title "Claude: ${label//;/\\;}")
+      "$wt_bin" "${wt_options[@]}" \
+        "$wsl_command" -d "$distro" --cd "${dir//;/\\;}" \
+        -- "${launch[@]//;/\\;}" "$id" </dev/null
+      ;;
+  esac
+}
+
+if [[ "$dry_run" == true ]]; then
+  printf 'Mode: %s\n' "$mode"
+  for i in "${order[@]}"; do
+    printf 'Would open %s — %s  [last activity: %s]\n' \
+      "${labels[$i]}" "${dirs[$i]}" "$(date -d "@${activity[$i]}" '+%Y-%m-%d %H:%M')"
+  done
+  printf 'Would restore %d session(s); skipped %d.\n' "${#ids[@]}" "$skipped"
+  exit 0
+fi
+
+if ((${#ids[@]} == 0)); then
+  printf 'No sessions active in the last %d hour(s); skipped %d.\n' "$max_age_hours" "$skipped"
+  exit 0
+fi
+
+command -v "$dialog_command" >/dev/null 2>&1 || {
+  echo "The dialog utility is required to select sessions: $dialog_command" >&2
+  exit 1
+}
+
+# Dialog tags are positions in $order so the selection maps straight back.
+dialog_items=()
+for pos in "${!order[@]}"; do
+  i="${order[$pos]}"
+  label="${labels[$i]}"
+  ((${#label} <= 60)) || label="${label:0:59}…"
+  dialog_items+=(
+    "$pos"
+    "$(printf '%-60s  %s  %s' "$label" \
+        "$(date -d "@${activity[$i]}" '+%Y-%m-%d %H:%M')" "${dirs[$i]##*/}")"
+    on
+  )
+done
+
+printf 'Found %d eligible session(s); opening the selection dialog...\n' "${#ids[@]}"
+if selected="$("$dialog_command" \
+    --clear --separate-output --stdout \
+    --title "Resume recent Claude sessions" \
+    --checklist "Select sessions to restore (all are selected by default):" \
+    0 0 0 "${dialog_items[@]}")"; then
+  while IFS= read -r pos; do
+    [[ -n "$pos" ]] || continue
+    if restore_session "${order[$pos]}"; then
+      ((restored += 1))
+    else
+      echo "Failed to open session ${ids[${order[$pos]}]}" >&2
+    fi
+  done <<< "$selected"
+else
+  echo "Session restore canceled; opened 0 session(s); skipped $skipped." >&2
+  exit 0
+fi
+printf 'Opened %d session(s); skipped %d.\n' "$restored" "$skipped"

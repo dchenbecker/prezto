@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -u
+
+if (($# != 2)); then
+  echo "Usage: claude-resume-session CLAUDE_LAUNCHER SESSION_ID" >&2
+  exit 2
+fi
+
+claude_launcher="$1"
+session_id="$2"
+
+"$claude_launcher" --resume "$session_id"
+claude_status=$?
+
+printf '\nClaude exited with status %d.\n' "$claude_status"
+printf 'Resume this session with: claude --resume %q\n\n' "$session_id"
+
+# Keep the tab/window alive so the output above stays readable.
+shell="${SHELL:-/bin/zsh}"
+exec "$shell" -l
